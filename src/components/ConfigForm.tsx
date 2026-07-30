@@ -99,6 +99,29 @@ export function ConfigForm({ definition, config, onChange }: ConfigFormProps): J
           onChange={(event) => setField("displayName", event.target.value === "" ? undefined : event.target.value)}
         />
       </label>
+
+      <label className="its-field its-field--wide" title="Variables rendered once as a REFERENCE DATA section above the template - context the model uses but never outputs">
+        <span className="its-field__name">data sources (optional)</span>
+        <input
+          type="text"
+          value={dataSourceText(config.dataSource)}
+          placeholder="Variable names, comma-separated, e.g. forecast"
+          spellCheck={false}
+          onChange={(event) => {
+            const names = event.target.value
+              .split(",")
+              .map((name) => name.trim())
+              .filter((name) => name.length > 0);
+            setField("dataSource", names.length === 0 ? undefined : names.length === 1 ? names[0] : names);
+          }}
+        />
+      </label>
     </div>
   );
+}
+
+function dataSourceText(value: JsonValue | undefined): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.filter((item) => typeof item === "string").join(", ");
+  return "";
 }

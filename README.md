@@ -43,7 +43,7 @@ export function MyApp() {
 
 - Block-based editing of text, placeholder and conditional elements, including nested conditionals with else branches
 - Interactive JSON structure builder: add a JSON object or array block, then add properties and items through the UI, each a fixed value, a generated fill (string, number or any value) or a nested object or array, to any depth; arrays and objects also take generated-run entries (`json_array_items`, `json_object_fields`). The structure serialises to ordinary ITS text and placeholder elements, so templates stay spec-compliant, and a template containing only a JSON structure compiles to a prompt whose one-shot response is the completed raw JSON document and nothing else
-- Config forms generated from each instruction type's `configSchema` (enums, integers, booleans, strings)
+- Config forms generated from each instruction type's `configSchema` (enums, integers, booleans, strings), plus a data sources field writing the reserved `dataSource` config key: referenced variables are rendered by compilers as a REFERENCE DATA section above the template, context the model uses but never outputs (requires its-compiler-js 1.3.0 or its-compiler 1.2.0)
 - Variables panel with JSON-aware value parsing and unused-variable hints
 - Custom instruction types panel: define template strings and config schemas (enums, defaults, integers, booleans) directly in the studio; new types appear in the placeholder palette immediately and renames update every placeholder that references them
 - Metadata panel covering name, description, author, version and `extends` schema references
