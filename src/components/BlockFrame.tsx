@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 interface BlockFrameProps {
-  kind: "text" | "placeholder" | "conditional";
+  kind: "text" | "placeholder" | "conditional" | "json";
   label: ReactNode;
   children: ReactNode;
   onMoveUp: () => void;

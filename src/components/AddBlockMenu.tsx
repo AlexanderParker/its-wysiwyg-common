@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { useEditorContext } from "../context";
+import { emptyJsonStructure, serialiseJsonStructure } from "../jsonStructure";
 import type { ContentElement } from "../types";
 import { defaultConfigFor, nextElementId } from "../utils";
 
 interface AddBlockMenuProps {
   onAdd: (element: ContentElement) => void;
+  onAddGroup?: (elements: ContentElement[]) => void;
   compact?: boolean;
 }
 
-export function AddBlockMenu({ onAdd, compact = false }: AddBlockMenuProps): JSX.Element {
+export function AddBlockMenu({ onAdd, onAddGroup, compact = false }: AddBlockMenuProps): JSX.Element {
   const { instructionTypes } = useEditorContext();
   const [open, setOpen] = useState(false);
 
@@ -27,6 +29,11 @@ export function AddBlockMenu({ onAdd, compact = false }: AddBlockMenuProps): JSX
       content: [{ type: "text", text: "", id: nextElementId("text") }],
       id: nextElementId("conditional"),
     });
+
+  const addJsonStructure = (): void => {
+    onAddGroup?.(serialiseJsonStructure(emptyJsonStructure()));
+    setOpen(false);
+  };
 
   const addPlaceholder = (typeName: string): void =>
     add({
@@ -53,6 +60,11 @@ export function AddBlockMenu({ onAdd, compact = false }: AddBlockMenuProps): JSX
           <span className="its-add__label">Structure</span>
           <button type="button" onClick={addText}>Text</button>
           <button type="button" onClick={addConditional}>Conditional</button>
+          {onAddGroup && (
+            <button type="button" title="Interactively build a JSON document with generated value positions" onClick={addJsonStructure}>
+              JSON structure
+            </button>
+          )}
         </div>
         <div className="its-add__group">
           <span className="its-add__label">Placeholders</span>

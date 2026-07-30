@@ -1,6 +1,6 @@
 {
   "name": "its-template-editor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "WYSIWYG React editor component for Instruction Template Specification (ITS) templates",
   "license": "MIT",
   "author": "Alexander Parker",
@@ -34,7 +34,8 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run typecheck && npm run build"
+    "test": "vitest run",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
   "peerDependencies": {
     "react": ">=18",
@@ -44,7 +45,8 @@
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "tsup": "^8.0.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
   },
   "keywords": [
     "its",
