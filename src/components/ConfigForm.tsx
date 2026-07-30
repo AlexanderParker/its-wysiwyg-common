@@ -116,6 +116,25 @@ export function ConfigForm({ definition, config, onChange }: ConfigFormProps): J
           }}
         />
       </label>
+
+      {config.dataSource !== undefined && (
+        <label
+          className="its-field"
+          title="Caps how many items or fields of each data source are included; when placeholders share a source the most generous request wins"
+        >
+          <span className="its-field__name">data limit (optional)</span>
+          <input
+            type="number"
+            min={1}
+            value={typeof config.dataLimit === "number" ? String(config.dataLimit) : ""}
+            placeholder="All rows"
+            onChange={(event) => {
+              const parsed = parseInt(event.target.value, 10);
+              setField("dataLimit", Number.isNaN(parsed) || parsed < 1 ? undefined : parsed);
+            }}
+          />
+        </label>
+      )}
     </div>
   );
 }
