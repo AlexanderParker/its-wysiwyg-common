@@ -1,10 +1,18 @@
 import { Fragment } from "react";
 import { useEditorContext } from "../context";
+import {
+  jsonStructureGroupId,
+  newJsonStructureGroupId,
+  parseJsonStructure,
+  serialiseJsonStructure,
+  type JsonStructure,
+} from "../jsonStructure";
 import type { ConditionalElement, ContentElement, PlaceholderElement, TextElement } from "../types";
 import { insertAt, moveItem, nextElementId, removeAt, replaceAt } from "../utils";
 import { AddBlockMenu } from "./AddBlockMenu";
 import { BlockFrame } from "./BlockFrame";
 import { ConfigForm } from "./ConfigForm";
+import { JsonStructureBlock } from "./JsonStructureBlock";
 
 interface BlockListProps {
   elements: ContentElement[];
@@ -12,14 +20,63 @@ interface BlockListProps {
   depth?: number;
 }
 
-export function BlockList({ elements, onChange, depth = 0 }: BlockListProps): JSX.Element {
-  const update = (index: number, element: ContentElement): void => onChange(replaceAt(elements, index, element));
+/**
+ * Elements whose ids share a jsb-<groupId>- prefix and parse as a JSON
+ * structure are edited as one builder block; everything else is a single
+ * block. Slots are the editing units the list renders and reorders.
+ */
+type Slot =
+  | { kind: "single"; element: ContentElement }
+  | { kind: "json"; groupId: string; structure: JsonStructure; elements: ContentElement[] };
 
-  const duplicate = (index: number): void => {
-    const source = elements[index];
-    const copy = JSON.parse(JSON.stringify(source)) as ContentElement;
-    copy.id = nextElementId(copy.type);
-    onChange(insertAt(elements, index + 1, copy));
+function computeSlots(elements: ContentElement[]): Slot[] {
+  const slots: Slot[] = [];
+  let index = 0;
+  while (index < elements.length) {
+    const groupId = jsonStructureGroupId(elements[index].id);
+    if (groupId !== null) {
+      let end = index;
+      while (end < elements.length && jsonStructureGroupId(elements[end].id) === groupId) end += 1;
+      const run = elements.slice(index, end);
+      const structure = parseJsonStructure(run);
+      if (structure !== null) {
+        slots.push({ kind: "json", groupId, structure, elements: run });
+        index = end;
+        continue;
+      }
+    }
+    slots.push({ kind: "single", element: elements[index] });
+    index += 1;
+  }
+  return slots;
+}
+
+function flattenSlots(slots: Slot[]): ContentElement[] {
+  return slots.flatMap((slot) => (slot.kind === "single" ? [slot.element] : slot.elements));
+}
+
+export function BlockList({ elements, onChange, depth = 0 }: BlockListProps): JSX.Element {
+  const slots = computeSlots(elements);
+
+  const commit = (nextSlots: Slot[]): void => onChange(flattenSlots(nextSlots));
+
+  const duplicateSlot = (index: number): void => {
+    const source = slots[index];
+    if (source.kind === "single") {
+      const copy = JSON.parse(JSON.stringify(source.element)) as ContentElement;
+      copy.id = nextElementId(copy.type);
+      commit(insertAt(slots, index + 1, { kind: "single", element: copy }));
+    } else {
+      const groupId = newJsonStructureGroupId();
+      commit(
+        insertAt(slots, index + 1, {
+          kind: "json",
+          groupId,
+          structure: source.structure,
+          elements: serialiseJsonStructure(source.structure, groupId),
+        }),
+      );
+    }
   };
 
   return (
@@ -27,26 +84,56 @@ export function BlockList({ elements, onChange, depth = 0 }: BlockListProps): JS
       {elements.length === 0 && (
         <p className="its-blocklist__empty">
           {depth === 0
-            ? "This template is empty. Add a text block to write static content, or a placeholder to insert an AI instruction."
+            ? "This template is empty. Add a text block to write static content, a placeholder to insert an AI instruction, or a JSON structure to build a structured response."
             : "This branch is empty."}
         </p>
       )}
-      {elements.map((element, index) => (
-        <Fragment key={element.id ?? `${element.type}-${index}`}>
-          <Block
-            element={element}
-            onChange={(updated) => update(index, updated)}
-            onMoveUp={() => onChange(moveItem(elements, index, index - 1))}
-            onMoveDown={() => onChange(moveItem(elements, index, index + 1))}
-            onDuplicate={() => duplicate(index)}
-            onDelete={() => onChange(removeAt(elements, index))}
-            canMoveUp={index > 0}
-            canMoveDown={index < elements.length - 1}
-            depth={depth}
-          />
-        </Fragment>
-      ))}
-      <AddBlockMenu compact={depth > 0} onAdd={(element) => onChange([...elements, element])} />
+      {slots.map((slot, index) => {
+        const shared = {
+          onMoveUp: (): void => commit(moveItem(slots, index, index - 1)),
+          onMoveDown: (): void => commit(moveItem(slots, index, index + 1)),
+          onDuplicate: (): void => duplicateSlot(index),
+          onDelete: (): void => commit(removeAt(slots, index)),
+          canMoveUp: index > 0,
+          canMoveDown: index < slots.length - 1,
+        };
+        if (slot.kind === "json") {
+          return (
+            <Fragment key={`json-${slot.groupId}`}>
+              <JsonStructureBlock
+                structure={slot.structure}
+                onChange={(structure) =>
+                  commit(
+                    replaceAt(slots, index, {
+                      kind: "json",
+                      groupId: slot.groupId,
+                      structure,
+                      elements: serialiseJsonStructure(structure, slot.groupId),
+                    }),
+                  )
+                }
+                {...shared}
+              />
+            </Fragment>
+          );
+        }
+        const element = slot.element;
+        return (
+          <Fragment key={element.id ?? `${element.type}-${index}`}>
+            <Block
+              element={element}
+              onChange={(updated) => commit(replaceAt(slots, index, { kind: "single", element: updated }))}
+              depth={depth}
+              {...shared}
+            />
+          </Fragment>
+        );
+      })}
+      <AddBlockMenu
+        compact={depth > 0}
+        onAdd={(element) => onChange([...elements, element])}
+        onAddGroup={(group) => onChange([...elements, ...group])}
+      />
     </div>
   );
 }

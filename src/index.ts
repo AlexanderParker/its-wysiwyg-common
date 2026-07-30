@@ -20,3 +20,17 @@ export {
   renameInstructionTypeReferences,
   resolveInstructionTypes,
 } from "./utils";
+export {
+  emptyJsonStructure,
+  jsonStructureGroupId,
+  newJsonStructureGroupId,
+  parseJsonStructure,
+  serialiseJsonStructure,
+} from "./jsonStructure";
+export type {
+  JsonArrayEntry,
+  JsonGeneratedLeafType,
+  JsonObjectEntry,
+  JsonStructure,
+  JsonStructureValue,
+} from "./jsonStructure";
