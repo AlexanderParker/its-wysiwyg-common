@@ -99,11 +99,11 @@
 .its-blocklist {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .its-blocklist--nested {
-  gap: 8px;
+  gap: 5px;
 }
 
 .its-blocklist__empty {
@@ -113,6 +113,272 @@
   border-radius: var(--its-radius);
   color: var(--its-ink-soft);
   font-size: 13px;
+}
+
+/* Document-flow blocks: content is laid out in compile order, visually
+   close to the compiled template. Actions reveal on hover/focus and stay
+   visible on narrow (touch) layouts. */
+
+.its-flow {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  border-radius: 6px;
+}
+
+.its-flow__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.its-flow__actions {
+  display: inline-flex;
+  gap: 2px;
+  flex: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.its-flow:hover > .its-flow__actions,
+.its-flow:focus-within > .its-flow__actions {
+  opacity: 1;
+}
+
+@media (max-width: 760px), (pointer: coarse) {
+  .its-flow__actions {
+    opacity: 0.6;
+  }
+}
+
+.its-flow__actions button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--its-ink-soft);
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  line-height: 1;
+  font-size: 12px;
+}
+
+.its-flow__actions button:hover:not(:disabled) {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.its-flow__actions button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.its-flow__delete:hover {
+  color: var(--its-danger);
+}
+
+/* Text in the flow: borderless until focused, mono like the template body */
+
+.its-flowtext {
+  width: 100%;
+  font-family: var(--its-mono) !important;
+  font-size: 13px !important;
+  line-height: 1.5;
+  border-color: transparent !important;
+  background: transparent !important;
+  padding: 4px 6px !important;
+  resize: vertical;
+}
+
+.its-flowtext:hover {
+  border-color: var(--its-line) !important;
+}
+
+.its-flowtext:focus {
+  border-color: var(--its-accent) !important;
+  background: var(--its-paper) !important;
+}
+
+/* Placeholder token: mirrors the compiled << >> marker */
+
+.its-token {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px;
+  border: 1px solid color-mix(in srgb, var(--its-accent) 30%, var(--its-line));
+  border-radius: 6px;
+  background: var(--its-accent-soft);
+}
+
+.its-token--unknown {
+  border-color: var(--its-danger);
+}
+
+.its-token__chevrons {
+  flex: none;
+  color: var(--its-accent);
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.its-token__type {
+  flex: none;
+  width: auto !important;
+  font-family: var(--its-mono);
+  font-size: 12.5px !important;
+  font-weight: 700;
+  color: var(--its-accent);
+  border-color: transparent !important;
+  background: transparent !important;
+  padding: 2px 2px !important;
+}
+
+.its-token__type:hover {
+  border-color: var(--its-accent) !important;
+}
+
+.its-token--unknown .its-token__type {
+  color: var(--its-danger);
+}
+
+.its-token__description {
+  flex: 1;
+  min-width: 8rem;
+  font-size: 13px !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  padding: 3px 6px !important;
+}
+
+.its-token__description:hover {
+  border-color: color-mix(in srgb, var(--its-accent) 40%, var(--its-line)) !important;
+}
+
+.its-token__description:focus {
+  border-color: var(--its-accent) !important;
+  background: var(--its-paper) !important;
+}
+
+.its-token__badge {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--its-accent);
+  background: var(--its-paper);
+  border: 1px solid color-mix(in srgb, var(--its-accent) 30%, var(--its-line));
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+.its-token__settings {
+  flex: none;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--its-accent);
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.its-token__settings:hover {
+  background: color-mix(in srgb, var(--its-accent) 14%, transparent);
+}
+
+@media (max-width: 640px) {
+  .its-token {
+    flex-wrap: wrap;
+  }
+
+  .its-token__description {
+    order: 5;
+    flex-basis: 100%;
+  }
+}
+
+/* Conditionals in the flow */
+
+.its-flowcond__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.its-flowcond__keyword {
+  flex: none;
+  font-family: var(--its-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--its-branch);
+  background: var(--its-branch-soft);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.its-flowcond__head .its-condition {
+  margin-bottom: 0;
+}
+
+/* Modal */
+
+.its-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgb(28 33 40 / 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.its-modal__panel {
+  width: min(560px, 100%);
+  max-height: min(80vh, 640px);
+  display: flex;
+  flex-direction: column;
+  background: var(--its-paper);
+  color: var(--its-ink);
+  border-radius: var(--its-radius);
+  box-shadow: 0 12px 40px rgb(28 33 40 / 0.3);
+  outline: none;
+}
+
+.its-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--its-line);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--its-ink);
+}
+
+.its-modal__close {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--its-ink-soft);
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  line-height: 1;
+}
+
+.its-modal__close:hover {
+  color: var(--its-danger);
+  background: color-mix(in srgb, var(--its-danger) 10%, transparent);
+}
+
+.its-modal__body {
+  padding: 14px;
+  overflow-y: auto;
 }
 
 /* Blocks */
