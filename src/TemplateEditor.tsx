@@ -35,7 +35,7 @@ export function TemplateEditor({
   if (showJsonTab) tabs.push({ id: "json", label: "JSON" });
 
   return (
-    <EditorContextProvider value={{ instructionTypes: mergedTypes }}>
+    <EditorContextProvider value={{ instructionTypes: mergedTypes, variables: value.variables ?? {} }}>
       <div className={className ? `its-editor ${className}` : "its-editor"}>
         <nav className="its-tabs" role="tablist">
           {tabs.map(({ id, label, badge }) => (

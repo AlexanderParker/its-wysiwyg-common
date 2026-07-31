@@ -1,5 +1,6 @@
 import type { ConfigPropertySchema, InstructionTypeDefinition, JsonValue, PlaceholderConfig } from "../types";
 import { coercePropertyValue } from "../utils";
+import { VariableField } from "./VariableField";
 
 interface ConfigFormProps {
   definition: InstructionTypeDefinition | undefined;
@@ -30,11 +31,12 @@ export function ConfigForm({ definition, config, onChange }: ConfigFormProps): J
     <div className="its-config">
       <label className="its-field its-field--wide">
         <span className="its-field__name">description</span>
-        <textarea
+        <VariableField
+          as="textarea"
           rows={2}
           value={config.description ?? ""}
-          placeholder="What should the AI generate here? Supports ${variables}."
-          onChange={(event) => onChange({ ...config, description: event.target.value })}
+          placeholder="What should the AI generate here? Supports ${variables}; right-click to insert one."
+          onValueChange={(description) => onChange({ ...config, description })}
         />
       </label>
 
@@ -80,10 +82,10 @@ export function ConfigForm({ definition, config, onChange }: ConfigFormProps): J
                   }
                 />
               ) : (
-                <input
-                  type="text"
+                <VariableField
+                  as="input"
                   value={fieldValue(config[name] as JsonValue | undefined)}
-                  onChange={(event) => setField(name, event.target.value === "" ? undefined : event.target.value)}
+                  onValueChange={(next) => setField(name, next === "" ? undefined : next)}
                 />
               )}
             </label>
