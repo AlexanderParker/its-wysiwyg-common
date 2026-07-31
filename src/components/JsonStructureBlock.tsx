@@ -10,6 +10,8 @@ interface JsonStructureBlockProps {
   onChange: (structure: JsonStructure) => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  onInsertBefore: () => void;
+  onInsertAfter: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   canMoveUp: boolean;
@@ -112,6 +114,8 @@ export function JsonStructureBlock(props: JsonStructureBlockProps): JSX.Element 
       }
       onMoveUp={props.onMoveUp}
       onMoveDown={props.onMoveDown}
+      onInsertBefore={props.onInsertBefore}
+      onInsertAfter={props.onInsertAfter}
       onDuplicate={props.onDuplicate}
       onDelete={props.onDelete}
       canMoveUp={props.canMoveUp}

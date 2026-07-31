@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useEditorContext } from "../context";
 import { JSON_STRUCTURE_TYPES, emptyJsonStructure, serialiseJsonStructure } from "../jsonStructure";
 import type { ContentElement } from "../types";
@@ -8,11 +7,22 @@ interface AddBlockMenuProps {
   onAdd: (element: ContentElement) => void;
   onAddGroup?: (elements: ContentElement[]) => void;
   compact?: boolean;
+  /** Controlled: the open panel renders exactly where the block will land. */
+  open: boolean;
+  onToggle: (open: boolean) => void;
+  /** Insertion points opened from a block's actions render no trigger. */
+  showTrigger?: boolean;
 }
 
-export function AddBlockMenu({ onAdd, onAddGroup, compact = false }: AddBlockMenuProps): JSX.Element {
+export function AddBlockMenu({
+  onAdd,
+  onAddGroup,
+  compact = false,
+  open,
+  onToggle,
+  showTrigger = true,
+}: AddBlockMenuProps): JSX.Element | null {
   const { instructionTypes } = useEditorContext();
-  const [open, setOpen] = useState(false);
 
   // The builder serialises to JSON type placeholders, so it is only offered
   // when the template's palette provides those types
@@ -20,7 +30,7 @@ export function AddBlockMenu({ onAdd, onAddGroup, compact = false }: AddBlockMen
 
   const add = (element: ContentElement): void => {
     onAdd(element);
-    setOpen(false);
+    onToggle(false);
   };
 
   const addText = (): void =>
@@ -41,7 +51,7 @@ export function AddBlockMenu({ onAdd, onAddGroup, compact = false }: AddBlockMen
 
   const addJsonStructure = (): void => {
     onAddGroup?.(serialiseJsonStructure(emptyJsonStructure()));
-    setOpen(false);
+    onToggle(false);
   };
 
   const addPlaceholder = (typeName: string): void =>
@@ -53,9 +63,12 @@ export function AddBlockMenu({ onAdd, onAddGroup, compact = false }: AddBlockMen
     });
 
   if (!open) {
+    if (!showTrigger) {
+      return null;
+    }
     return (
       <div className={compact ? "its-add its-add--compact" : "its-add"}>
-        <button type="button" className="its-add__trigger" onClick={() => setOpen(true)}>
+        <button type="button" className="its-add__trigger" onClick={() => onToggle(true)}>
           + Add block
         </button>
       </div>
@@ -94,7 +107,7 @@ export function AddBlockMenu({ onAdd, onAddGroup, compact = false }: AddBlockMen
             </button>
           ))}
         </div>
-        <button type="button" className="its-add__cancel" onClick={() => setOpen(false)}>
+        <button type="button" className="its-add__cancel" onClick={() => onToggle(false)}>
           Cancel
         </button>
       </div>
