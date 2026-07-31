@@ -1,4 +1,5 @@
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
+import type { ReactNode } from "react";
 import { useEditorContext } from "../context";
 import {
   jsonStructureGroupId,
@@ -10,9 +11,9 @@ import {
 import type { ConditionalElement, ContentElement, PlaceholderElement, TextElement } from "../types";
 import { insertAt, moveItem, nextElementId, removeAt, replaceAt } from "../utils";
 import { AddBlockMenu } from "./AddBlockMenu";
-import { BlockFrame } from "./BlockFrame";
 import { ConfigForm } from "./ConfigForm";
 import { JsonStructureBlock } from "./JsonStructureBlock";
+import { Modal } from "./Modal";
 import { VariableField } from "./VariableField";
 
 interface BlockListProps {
@@ -162,62 +163,126 @@ function Block(props: BlockProps): JSX.Element {
   return <ConditionalBlock {...props} element={element} />;
 }
 
+/**
+ * Document-flow wrapper: blocks sit in the order they compile, with the
+ * reorder/duplicate/delete actions in a toolbar revealed on hover or focus
+ * (always visible on narrow/touch layouts).
+ */
+function FlowBlock(props: BlockProps & { kind: "text" | "placeholder" | "conditional"; children: ReactNode }): JSX.Element {
+  const { kind, children, onMoveUp, onMoveDown, onDuplicate, onDelete, canMoveUp, canMoveDown } = props;
+  return (
+    <div className={`its-flow its-flow--${kind}`}>
+      <div className="its-flow__content">{children}</div>
+      <span className="its-flow__actions">
+        <button type="button" title="Move up" disabled={!canMoveUp} onClick={onMoveUp} aria-label="Move block up">
+          ↑
+        </button>
+        <button type="button" title="Move down" disabled={!canMoveDown} onClick={onMoveDown} aria-label="Move block down">
+          ↓
+        </button>
+        <button type="button" title="Duplicate" onClick={onDuplicate} aria-label="Duplicate block">
+          ⧉
+        </button>
+        <button type="button" title="Delete" className="its-flow__delete" onClick={onDelete} aria-label="Delete block">
+          ✕
+        </button>
+      </span>
+    </div>
+  );
+}
+
 function TextBlock(props: BlockProps & { element: TextElement }): JSX.Element {
   const { element, onChange } = props;
   return (
-    <BlockFrame kind="text" label="Text" {...frameProps(props)}>
+    <FlowBlock {...props} kind="text">
       <VariableField
         as="textarea"
-        className="its-textarea"
-        rows={Math.min(10, Math.max(2, element.text.split("\n").length))}
+        className="its-flowtext"
+        rows={Math.min(12, Math.max(1, element.text.split("\n").length))}
         value={element.text}
         placeholder={'Static content. Reference variables with ${name}, or right-click to insert one.'}
         onValueChange={(text) => onChange({ ...element, text })}
       />
-    </BlockFrame>
+    </FlowBlock>
   );
 }
 
 function PlaceholderBlock(props: BlockProps & { element: PlaceholderElement }): JSX.Element {
   const { element, onChange } = props;
   const { instructionTypes } = useEditorContext();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const definition = instructionTypes[element.instructionType];
   const knownType = definition !== undefined;
+  const extraConfig = Object.keys(element.config).filter(
+    (key) => !["description", "displayName"].includes(key) && element.config[key] !== undefined,
+  );
 
   return (
-    <BlockFrame
-      kind="placeholder"
-      label={
-        <>
-          <span className="its-block__chevrons">&laquo;</span>
-          <select
-            className="its-block__typeselect"
-            value={element.instructionType}
-            onChange={(event) =>
-              onChange({ ...element, instructionType: event.target.value })
-            }
-          >
-            {!knownType && <option value={element.instructionType}>{element.instructionType} (unknown)</option>}
-            {Object.keys(instructionTypes).map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-          <span className="its-block__chevrons">&raquo;</span>
-          {element.config.displayName && <span className="its-block__displayname">{element.config.displayName}</span>}
-        </>
-      }
-      {...frameProps(props)}
-    >
-      {!knownType && (
-        <p className="its-block__warning">
-          No definition found for "{element.instructionType}". Add it to the template's custom instruction types, or
-          extend a schema that defines it.
-        </p>
+    <FlowBlock {...props} kind="placeholder">
+      <div className={knownType ? "its-token" : "its-token its-token--unknown"}>
+        <span className="its-token__chevrons">&laquo;</span>
+        <select
+          className="its-token__type"
+          aria-label="Instruction type"
+          value={element.instructionType}
+          onChange={(event) => onChange({ ...element, instructionType: event.target.value })}
+        >
+          {!knownType && <option value={element.instructionType}>{element.instructionType} (unknown)</option>}
+          {Object.keys(instructionTypes).map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
+        <VariableField
+          as="input"
+          className="its-token__description"
+          value={element.config.description ?? ""}
+          placeholder="What should the AI generate here?"
+          ariaLabel="Placeholder description"
+          onValueChange={(description) => onChange({ ...element, config: { ...element.config, description } })}
+        />
+        <span className="its-token__chevrons">&raquo;</span>
+        {extraConfig.length > 0 && (
+          <span className="its-token__badge" title={extraConfig.join(", ")}>
+            {extraConfig.length} option{extraConfig.length === 1 ? "" : "s"}
+          </span>
+        )}
+        <button
+          type="button"
+          className="its-token__settings"
+          title="Placeholder settings"
+          aria-label="Open placeholder settings"
+          aria-haspopup="dialog"
+          onClick={() => setSettingsOpen(true)}
+        >
+          ⚙
+        </button>
+      </div>
+      {settingsOpen && (
+        <Modal
+          title={
+            <>
+              Placeholder settings
+              {element.config.displayName ? ` - ${element.config.displayName}` : ""}
+            </>
+          }
+          onClose={() => setSettingsOpen(false)}
+        >
+          {!knownType && (
+            <p className="its-block__warning">
+              No definition found for "{element.instructionType}". Add it to the template's custom instruction types, or
+              extend a schema that defines it.
+            </p>
+          )}
+          <ConfigForm
+            definition={definition}
+            config={element.config}
+            onChange={(config) => onChange({ ...element, config })}
+          />
+        </Modal>
       )}
-      <ConfigForm definition={definition} config={element.config} onChange={(config) => onChange({ ...element, config })} />
-    </BlockFrame>
+    </FlowBlock>
   );
 }
 
@@ -236,43 +301,36 @@ function ConditionalBlock(props: BlockProps & { element: ConditionalElement }): 
   };
 
   return (
-    <BlockFrame kind="conditional" label={<span>If</span>} {...frameProps(props)}>
-      <VariableField
-        as="input"
-        className="its-condition"
-        insertFormat="bare"
-        value={element.condition}
-        placeholder={"e.g. audienceLevel == 'technical' && featureCount > 3 (right-click to insert a variable)"}
-        onValueChange={(condition) => onChange({ ...element, condition })}
-      />
+    <FlowBlock {...props} kind="conditional">
+      <div className="its-flowcond__head">
+        <span className="its-flowcond__keyword">if</span>
+        <VariableField
+          as="input"
+          className="its-condition"
+          insertFormat="bare"
+          value={element.condition}
+          placeholder={"e.g. audienceLevel == 'technical' && featureCount > 3 (right-click to insert a variable)"}
+          onValueChange={(condition) => onChange({ ...element, condition })}
+        />
+      </div>
       <div className="its-branch">
-        <span className="its-branch__label">then</span>
         <BlockList elements={element.content} onChange={(content) => onChange({ ...element, content })} depth={depth + 1} />
       </div>
       {hasElse && (
-        <div className="its-branch its-branch--else">
-          <span className="its-branch__label">else</span>
-          <BlockList
-            elements={element.else ?? []}
-            onChange={(elseContent) => onChange({ ...element, else: elseContent })}
-            depth={depth + 1}
-          />
-        </div>
+        <>
+          <span className="its-flowcond__keyword">else</span>
+          <div className="its-branch its-branch--else">
+            <BlockList
+              elements={element.else ?? []}
+              onChange={(elseContent) => onChange({ ...element, else: elseContent })}
+              depth={depth + 1}
+            />
+          </div>
+        </>
       )}
       <button type="button" className="its-branch__toggle" onClick={toggleElse}>
         {hasElse ? "Remove else branch" : "Add else branch"}
       </button>
-    </BlockFrame>
+    </FlowBlock>
   );
-}
-
-function frameProps(props: BlockProps): Omit<Parameters<typeof BlockFrame>[0], "kind" | "label" | "children"> {
-  return {
-    onMoveUp: props.onMoveUp,
-    onMoveDown: props.onMoveDown,
-    onDuplicate: props.onDuplicate,
-    onDelete: props.onDelete,
-    canMoveUp: props.canMoveUp,
-    canMoveDown: props.canMoveDown,
-  };
 }
