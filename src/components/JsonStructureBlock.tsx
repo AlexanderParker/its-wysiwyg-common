@@ -260,14 +260,17 @@ function PropertyEditor({
 }): JSX.Element {
   return (
     <div className="its-json__row">
-      <input
-        className="its-json__name"
-        type="text"
-        value={entry.name}
-        spellCheck={false}
-        aria-label="Property name"
-        onChange={(event) => onChange({ ...entry, name: event.target.value })}
-      />
+      <span className="its-grow its-grow--jsonname" data-value={entry.name || "name"}>
+        <input
+          className="its-json__name"
+          type="text"
+          value={entry.name}
+          spellCheck={false}
+          placeholder="name"
+          aria-label="Property name"
+          onChange={(event) => onChange({ ...entry, name: event.target.value })}
+        />
+      </span>
       <span className="its-json__colon">:</span>
       <ValueEditor value={entry.value} onChange={(value) => onChange({ ...entry, value })} />
       <RemoveButton onClick={onRemove} />
