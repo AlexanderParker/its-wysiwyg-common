@@ -72,14 +72,21 @@ export function ConfigForm({ definition, config, onChange }: ConfigFormProps): J
                   <option value="false">false</option>
                 </select>
               ) : schema.type === "integer" || schema.type === "number" ? (
-                <input
-                  type="number"
-                  min={schema.minimum}
-                  max={schema.maximum}
+                <VariableField
+                  as="input"
+                  valueFilter="integer"
+                  spellCheck={false}
                   value={fieldValue(config[name] as JsonValue | undefined)}
-                  onChange={(event) =>
-                    setField(name, event.target.value === "" ? undefined : coercePropertyValue(schema, event.target.value))
-                  }
+                  onValueChange={(next) => {
+                    const trimmed = next.trim();
+                    if (trimmed === "") {
+                      setField(name, undefined);
+                    } else if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
+                      setField(name, coercePropertyValue(schema, trimmed));
+                    } else {
+                      setField(name, next);
+                    }
+                  }}
                 />
               ) : (
                 <VariableField

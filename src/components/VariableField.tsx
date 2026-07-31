@@ -14,6 +14,9 @@ import type { JsonValue } from "../types";
 
 export type InsertFormat = "template" | "bare";
 
+/** Restricts the tree to references that resolve to values of a kind. */
+export type ValueFilter = "integer";
+
 export interface VariableTreeNode {
   label: string;
   insertPath?: string;
@@ -28,10 +31,28 @@ function isPlainObject(value: JsonValue | undefined): value is { [key: string]: 
   return value !== undefined && value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function functionNodes(path: string, first: JsonValue | undefined): VariableTreeNode[] {
+function isIntegerValue(value: JsonValue | undefined): boolean {
+  return typeof value === "number" && Number.isInteger(value);
+}
+
+function functionNodes(path: string, first: JsonValue | undefined, filter: ValueFilter | undefined): VariableTreeNode[] {
   const nodes: VariableTreeNode[] = [];
   if (isPlainObject(first)) {
     const keys = Object.keys(first);
+    if (filter === "integer") {
+      // avg can be fractional and concat/top are not integers, so only
+      // whole-number-preserving aggregations remain
+      const integerKeys = keys.filter((key) => isIntegerValue(first[key]));
+      for (const fn of ["sum", "min", "max"]) {
+        if (integerKeys.length > 0) {
+          nodes.push({
+            label: `${fn}(…)`,
+            children: integerKeys.map((key) => ({ label: key, insertPath: `${path}.${fn}(${key})` })),
+          });
+        }
+      }
+      return nodes;
+    }
     const numericKeys = keys.filter((key) => typeof first[key] === "number");
     nodes.push({
       label: "concat(…)",
@@ -46,6 +67,14 @@ function functionNodes(path: string, first: JsonValue | undefined): VariableTree
       }
     }
   } else {
+    if (filter === "integer") {
+      if (isIntegerValue(first)) {
+        for (const fn of ["sum", "min", "max"]) {
+          nodes.push({ label: `${fn}()`, insertPath: `${path}.${fn}()` });
+        }
+      }
+      return nodes;
+    }
     nodes.push({ label: "concat()", insertPath: `${path}.concat()` });
     if (typeof first === "number") {
       for (const fn of ["sum", "avg", "min", "max"]) {
@@ -66,35 +95,56 @@ function nodeFor(
   path: string,
   depth: number,
   includeFunctions: boolean,
+  filter: ValueFilter | undefined,
 ): VariableTreeNode {
   if (Array.isArray(value)) {
     const children: VariableTreeNode[] = [{ label: ".length", insertPath: `${path}.length` }];
     if (includeFunctions) {
-      children.push(...functionNodes(path, value[0]));
+      children.push(...functionNodes(path, value[0], filter));
     }
     if (depth < MAX_DEPTH) {
       value.slice(0, MAX_INDICES).forEach((item, index) => {
-        children.push(nodeFor(`[${index}]`, item, `${path}[${index}]`, depth + 1, includeFunctions));
+        children.push(nodeFor(`[${index}]`, item, `${path}[${index}]`, depth + 1, includeFunctions, filter));
       });
     }
-    return { label, insertPath: path, children };
+    return { label, insertPath: filter === "integer" ? undefined : path, children };
   }
   if (isPlainObject(value)) {
     const children =
       depth < MAX_DEPTH
-        ? Object.entries(value).map(([key, item]) => nodeFor(key, item, `${path}.${key}`, depth + 1, includeFunctions))
+        ? Object.entries(value).map(([key, item]) =>
+            nodeFor(key, item, `${path}.${key}`, depth + 1, includeFunctions, filter),
+          )
         : undefined;
-    return { label, insertPath: path, children };
+    return { label, insertPath: filter === "integer" ? undefined : path, children };
+  }
+  if (filter === "integer" && !isIntegerValue(value)) {
+    return { label };
   }
   return { label, insertPath: path };
+}
+
+function pruneEmpty(nodes: VariableTreeNode[]): VariableTreeNode[] {
+  const pruned: VariableTreeNode[] = [];
+  for (const node of nodes) {
+    const children = node.children === undefined ? undefined : pruneEmpty(node.children);
+    const hasChildren = children !== undefined && children.length > 0;
+    if (node.insertPath === undefined && !hasChildren) continue;
+    pruned.push({ ...node, children: hasChildren ? children : undefined });
+  }
+  return pruned;
 }
 
 /** Builds the variable tree shown by the insertion menu. */
 export function buildVariableTree(
   variables: Record<string, JsonValue>,
   includeFunctions: boolean,
+  filter?: ValueFilter,
 ): VariableTreeNode[] {
-  return Object.entries(variables).map(([name, value]) => nodeFor(name, value, name, 1, includeFunctions));
+  const tree = Object.entries(variables).map(([name, value]) =>
+    nodeFor(name, value, name, 1, includeFunctions, filter),
+  );
+  return filter === undefined ? tree : pruneEmpty(tree);
 }
 
 interface MenuState {
@@ -161,6 +211,7 @@ interface VariableFieldProps {
   value: string;
   onValueChange: (value: string) => void;
   insertFormat?: InsertFormat;
+  valueFilter?: ValueFilter;
   className?: string;
   placeholder?: string;
   rows?: number;
@@ -175,6 +226,7 @@ export function VariableField({
   value,
   onValueChange,
   insertFormat = "template",
+  valueFilter,
   className,
   placeholder,
   rows,
@@ -186,7 +238,7 @@ export function VariableField({
   const { variables } = useEditorContext();
   const fieldRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
-  const tree = buildVariableTree(variables, insertFormat === "template");
+  const tree = buildVariableTree(variables, insertFormat === "template", valueFilter);
 
   useEffect(() => {
     if (menu === null) return;
