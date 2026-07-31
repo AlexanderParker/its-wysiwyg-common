@@ -49,6 +49,48 @@ describe("buildVariableTree", () => {
     expect(find(forecast?.children ?? [], "sum(…)")).toBeUndefined();
     expect(find(forecast?.children ?? [], ".length")?.insertPath).toBe("forecast.length");
   });
+
+  it("integer filter keeps only whole-number references selectable", () => {
+    const tree = buildVariableTree(variables, true, "integer");
+
+    expect(find(tree, "location")).toBeUndefined();
+    const settings = find(tree, "settings");
+    expect(settings?.insertPath).toBeUndefined();
+    expect(find(settings?.children ?? [], "level")?.insertPath).toBe("settings.level");
+    expect(find(settings?.children ?? [], "theme")).toBeUndefined();
+
+    const forecast = find(tree, "forecast");
+    expect(forecast?.insertPath).toBeUndefined();
+    expect(find(forecast?.children ?? [], ".length")?.insertPath).toBe("forecast.length");
+    const first = find(forecast?.children ?? [], "[0]");
+    expect(find(first?.children ?? [], "high")?.insertPath).toBe("forecast[0].high");
+    expect(find(first?.children ?? [], "day")).toBeUndefined();
+  });
+
+  it("integer filter restricts functions to whole-number aggregations", () => {
+    const tree = buildVariableTree(variables, true, "integer");
+    const forecast = find(tree, "forecast");
+
+    const sum = find(forecast?.children ?? [], "sum(…)");
+    expect(find(sum?.children ?? [], "high")?.insertPath).toBe("forecast.sum(high)");
+    expect(find(sum?.children ?? [], "day")).toBeUndefined();
+    expect(find(forecast?.children ?? [], "min(…)")).toBeDefined();
+    expect(find(forecast?.children ?? [], "max(…)")).toBeDefined();
+    expect(find(forecast?.children ?? [], "avg(…)")).toBeUndefined();
+    expect(find(forecast?.children ?? [], "concat(…)")).toBeUndefined();
+    expect(find(forecast?.children ?? [], "top(…)")).toBeUndefined();
+  });
+
+  it("integer filter prunes branches with nothing selectable", () => {
+    const tree = buildVariableTree({ names: ["a", "b"], nested: { note: "text" }, rating: 4.5 }, true, "integer");
+
+    expect(find(tree, "nested")).toBeUndefined();
+    expect(find(tree, "rating")).toBeUndefined();
+    const names = find(tree, "names");
+    expect(names).toBeDefined();
+    expect(find(names?.children ?? [], ".length")?.insertPath).toBe("names.length");
+    expect(find(names?.children ?? [], "[0]")).toBeUndefined();
+  });
 });
 
 describe("null fixed values", () => {
