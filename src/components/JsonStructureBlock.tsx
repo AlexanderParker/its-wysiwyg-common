@@ -25,6 +25,7 @@ const VALUE_KINDS = [
   { id: "literal-string", label: "Fixed string" },
   { id: "literal-number", label: "Fixed number" },
   { id: "literal-boolean", label: "Fixed true/false" },
+  { id: "literal-null", label: "Fixed null" },
 ] as const;
 
 type ValueKindId = (typeof VALUE_KINDS)[number]["id"];
@@ -33,6 +34,7 @@ function valueKindOf(value: JsonStructureValue): ValueKindId {
   if (value.kind === "literal") {
     if (typeof value.value === "number") return "literal-number";
     if (typeof value.value === "boolean") return "literal-boolean";
+    if (value.value === null) return "literal-null";
     return "literal-string";
   }
   if (value.kind === "object") return "object";
@@ -65,6 +67,8 @@ function convertValue(value: JsonStructureValue, kind: ValueKindId): JsonStructu
     }
     case "literal-boolean":
       return { kind: "literal", value: true };
+    case "literal-null":
+      return { kind: "literal", value: null };
   }
 }
 
@@ -342,6 +346,9 @@ function ValueEditor({
 }
 
 function LiteralEditor({ value, onChange }: { value: JsonValue; onChange: (value: JsonValue) => void }): JSX.Element {
+  if (value === null) {
+    return <span className="its-json__nullchip" title="Emitted as a JSON null">null</span>;
+  }
   if (typeof value === "number") {
     return <FixedNumberEditor value={value} onChange={onChange} />;
   }

@@ -5,48 +5,155 @@ import type { JsonValue } from "../types";
 
 /**
  * Text inputs and textareas that support right-click variable insertion:
- * the context menu lists the template's variable paths and inserts a
- * reference at the caret. Template fields insert ${path}; condition fields
- * insert the bare path, matching conditional expression syntax.
+ * the context menu shows the template's variables as an expandable tree
+ * (object properties, array indices, .length and collection functions) and
+ * inserts a reference at the caret. Template fields insert ${path};
+ * condition fields insert the bare path and omit functions, which are not
+ * valid in conditional expressions.
  */
 
 export type InsertFormat = "template" | "bare";
+
+export interface VariableTreeNode {
+  label: string;
+  insertPath?: string;
+  children?: VariableTreeNode[];
+}
+
+const MAX_INDICES = 10;
+const MAX_DEPTH = 4;
+const TOP_CHOICES = [1, 3, 5, 10];
+
+function isPlainObject(value: JsonValue | undefined): value is { [key: string]: JsonValue } {
+  return value !== undefined && value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function functionNodes(path: string, first: JsonValue | undefined): VariableTreeNode[] {
+  const nodes: VariableTreeNode[] = [];
+  if (isPlainObject(first)) {
+    const keys = Object.keys(first);
+    const numericKeys = keys.filter((key) => typeof first[key] === "number");
+    nodes.push({
+      label: "concat(…)",
+      children: keys.map((key) => ({ label: key, insertPath: `${path}.concat(${key})` })),
+    });
+    for (const fn of ["sum", "avg", "min", "max"]) {
+      if (numericKeys.length > 0) {
+        nodes.push({
+          label: `${fn}(…)`,
+          children: numericKeys.map((key) => ({ label: key, insertPath: `${path}.${fn}(${key})` })),
+        });
+      }
+    }
+  } else {
+    nodes.push({ label: "concat()", insertPath: `${path}.concat()` });
+    if (typeof first === "number") {
+      for (const fn of ["sum", "avg", "min", "max"]) {
+        nodes.push({ label: `${fn}()`, insertPath: `${path}.${fn}()` });
+      }
+    }
+  }
+  nodes.push({
+    label: "top(…)",
+    children: TOP_CHOICES.map((count) => ({ label: String(count), insertPath: `${path}.top(${count})` })),
+  });
+  return nodes;
+}
+
+function nodeFor(
+  label: string,
+  value: JsonValue | undefined,
+  path: string,
+  depth: number,
+  includeFunctions: boolean,
+): VariableTreeNode {
+  if (Array.isArray(value)) {
+    const children: VariableTreeNode[] = [{ label: ".length", insertPath: `${path}.length` }];
+    if (includeFunctions) {
+      children.push(...functionNodes(path, value[0]));
+    }
+    if (depth < MAX_DEPTH) {
+      value.slice(0, MAX_INDICES).forEach((item, index) => {
+        children.push(nodeFor(`[${index}]`, item, `${path}[${index}]`, depth + 1, includeFunctions));
+      });
+    }
+    return { label, insertPath: path, children };
+  }
+  if (isPlainObject(value)) {
+    const children =
+      depth < MAX_DEPTH
+        ? Object.entries(value).map(([key, item]) => nodeFor(key, item, `${path}.${key}`, depth + 1, includeFunctions))
+        : undefined;
+    return { label, insertPath: path, children };
+  }
+  return { label, insertPath: path };
+}
+
+/** Builds the variable tree shown by the insertion menu. */
+export function buildVariableTree(
+  variables: Record<string, JsonValue>,
+  includeFunctions: boolean,
+): VariableTreeNode[] {
+  return Object.entries(variables).map(([name, value]) => nodeFor(name, value, name, 1, includeFunctions));
+}
 
 interface MenuState {
   x: number;
   y: number;
 }
 
-/** Enumerates useful variable paths: nested object keys and first-element array paths, depth-capped. */
-export function variablePaths(variables: Record<string, JsonValue>, maxDepth = 3, cap = 60): string[] {
-  const paths: string[] = [];
-
-  const walk = (value: JsonValue | undefined, path: string, depth: number): void => {
-    if (paths.length >= cap) return;
-    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-      if (path.length > 0) paths.push(path);
-      if (depth < maxDepth) {
-        for (const [key, item] of Object.entries(value)) {
-          walk(item, path.length === 0 ? key : `${path}.${key}`, depth + 1);
-        }
-      }
-      return;
-    }
-    if (Array.isArray(value)) {
-      paths.push(path);
-      paths.push(`${path}.length`);
-      if (depth < maxDepth && value.length > 0) {
-        walk(value[0], `${path}[0]`, depth + 1);
-      }
-      return;
-    }
-    paths.push(path);
-  };
-
-  for (const [name, value] of Object.entries(variables)) {
-    walk(value, name, 1);
-  }
-  return [...new Set(paths)].slice(0, cap);
+function TreeItem({
+  node,
+  depth,
+  onInsert,
+}: {
+  node: VariableTreeNode;
+  depth: number;
+  onInsert: (path: string) => void;
+}): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const hasChildren = node.children !== undefined && node.children.length > 0;
+  return (
+    <>
+      <div className="its-varmenu__row" style={{ paddingLeft: `${depth * 0.8}rem` }}>
+        {hasChildren ? (
+          <button
+            type="button"
+            className="its-varmenu__toggle"
+            aria-label={open ? "Collapse" : "Expand"}
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpen(!open);
+            }}
+          >
+            {open ? "▾" : "▸"}
+          </button>
+        ) : (
+          <span className="its-varmenu__toggle its-varmenu__toggle--empty" />
+        )}
+        {node.insertPath !== undefined ? (
+          <button type="button" className="its-varmenu__insert" role="menuitem" onClick={() => onInsert(node.insertPath!)}>
+            {node.label}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="its-varmenu__insert its-varmenu__insert--group"
+            aria-label={`Expand ${node.label}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpen(!open);
+            }}
+          >
+            {node.label}
+          </button>
+        )}
+      </div>
+      {open && node.children?.map((child, index) => (
+        <TreeItem key={`${child.label}-${index}`} node={child} depth={depth + 1} onInsert={onInsert} />
+      ))}
+    </>
+  );
 }
 
 interface VariableFieldProps {
@@ -79,7 +186,7 @@ export function VariableField({
   const { variables } = useEditorContext();
   const fieldRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
-  const paths = variablePaths(variables);
+  const tree = buildVariableTree(variables, insertFormat === "template");
 
   useEffect(() => {
     if (menu === null) return;
@@ -96,7 +203,7 @@ export function VariableField({
   }, [menu]);
 
   const openMenu = (event: React.MouseEvent): void => {
-    if (paths.length === 0) return; // fall through to the browser menu
+    if (tree.length === 0) return; // fall through to the browser menu
     event.preventDefault();
     setMenu({ x: event.clientX, y: event.clientY });
   };
@@ -138,10 +245,8 @@ export function VariableField({
     >
       <span className="its-varmenu__title">Insert variable</span>
       <div className="its-varmenu__list">
-        {paths.map((path) => (
-          <button type="button" key={path} role="menuitem" onClick={() => insert(path)}>
-            {insertFormat === "bare" ? path : `\${${path}}`}
-          </button>
+        {tree.map((node, index) => (
+          <TreeItem key={`${node.label}-${index}`} node={node} depth={0} onInsert={insert} />
         ))}
       </div>
     </div>
