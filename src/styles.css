@@ -801,3 +801,54 @@
 .its-json__remove:hover {
   color: var(--its-danger);
 }
+
+/* Variable insertion context menu */
+
+.its-varmenu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 12rem;
+  max-width: 20rem;
+  background: var(--its-paper);
+  border: 1px solid var(--its-line);
+  border-radius: var(--its-radius);
+  box-shadow: 0 6px 24px rgba(28, 33, 40, 0.18);
+  padding: 0.35rem;
+}
+
+.its-varmenu__title {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--its-ink-soft);
+  padding: 0.15rem 0.4rem 0.3rem;
+}
+
+.its-varmenu__list {
+  max-height: 14rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.its-varmenu__list button {
+  text-align: left;
+  font-family: var(--its-mono);
+  font-size: 0.8rem;
+  padding: 0.25rem 0.4rem;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: var(--its-ink);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.its-varmenu__list button:hover {
+  background: var(--its-accent-soft);
+  color: var(--its-accent);
+}

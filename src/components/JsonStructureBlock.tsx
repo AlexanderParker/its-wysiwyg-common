@@ -3,6 +3,7 @@ import type { JsonArrayEntry, JsonObjectEntry, JsonStructure, JsonStructureValue
 import type { JsonValue } from "../types";
 import { removeAt, replaceAt } from "../utils";
 import { BlockFrame } from "./BlockFrame";
+import { VariableField } from "./VariableField";
 
 interface JsonStructureBlockProps {
   structure: JsonStructure;
@@ -21,13 +22,19 @@ const VALUE_KINDS = [
   { id: "generated-value", label: "Generated value" },
   { id: "object", label: "Object" },
   { id: "array", label: "Array" },
-  { id: "literal", label: "Fixed value" },
+  { id: "literal-string", label: "Fixed string" },
+  { id: "literal-number", label: "Fixed number" },
+  { id: "literal-boolean", label: "Fixed true/false" },
 ] as const;
 
 type ValueKindId = (typeof VALUE_KINDS)[number]["id"];
 
 function valueKindOf(value: JsonStructureValue): ValueKindId {
-  if (value.kind === "literal") return "literal";
+  if (value.kind === "literal") {
+    if (typeof value.value === "number") return "literal-number";
+    if (typeof value.value === "boolean") return "literal-boolean";
+    return "literal-string";
+  }
   if (value.kind === "object") return "object";
   if (value.kind === "array") return "array";
   if (value.type === "json_string") return "generated-string";
@@ -38,6 +45,7 @@ function valueKindOf(value: JsonStructureValue): ValueKindId {
 function convertValue(value: JsonStructureValue, kind: ValueKindId): JsonStructureValue {
   if (valueKindOf(value) === kind) return value;
   const description = value.kind === "generated" ? value.description : "";
+  const literal = value.kind === "literal" ? value.value : undefined;
   switch (kind) {
     case "generated-string":
       return { kind: "generated", type: "json_string", description };
@@ -49,8 +57,14 @@ function convertValue(value: JsonStructureValue, kind: ValueKindId): JsonStructu
       return { kind: "object", entries: [] };
     case "array":
       return { kind: "array", entries: [] };
-    case "literal":
-      return { kind: "literal", value: "" };
+    case "literal-string":
+      return { kind: "literal", value: typeof literal === "number" || typeof literal === "boolean" ? String(literal) : "" };
+    case "literal-number": {
+      const parsed = typeof literal === "string" ? Number.parseFloat(literal) : NaN;
+      return { kind: "literal", value: Number.isNaN(parsed) ? 0 : parsed };
+    }
+    case "literal-boolean":
+      return { kind: "literal", value: true };
   }
 }
 
@@ -278,12 +292,12 @@ function ValueEditor({
         </select>
         {value.kind === "generated" && (
           <>
-            <input
+            <VariableField
+              as="input"
               className="its-json__description"
-              type="text"
               value={value.description}
               placeholder="What should be generated here?"
-              onChange={(event) => onChange({ ...value, description: event.target.value })}
+              onValueChange={(description) => onChange({ ...value, description })}
             />
             {value.type === "json_number" && (
               <select
@@ -313,7 +327,9 @@ function ValueEditor({
             )}
           </>
         )}
-        {value.kind === "literal" && <LiteralEditor value={value.value} onChange={(literal) => onChange({ kind: "literal", value: literal })} />}
+        {value.kind === "literal" && (
+          <LiteralEditor value={value.value} onChange={(literal) => onChange({ kind: "literal", value: literal })} />
+        )}
       </div>
       {value.kind === "object" && (
         <ObjectEditor entries={value.entries} onChange={(entries) => onChange({ kind: "object", entries })} />
@@ -326,38 +342,55 @@ function ValueEditor({
 }
 
 function LiteralEditor({ value, onChange }: { value: JsonValue; onChange: (value: JsonValue) => void }): JSX.Element {
-  const [draft, setDraft] = useState<string | null>(null);
-  const [invalid, setInvalid] = useState(false);
+  if (typeof value === "number") {
+    return <FixedNumberEditor value={value} onChange={onChange} />;
+  }
+  if (typeof value === "boolean") {
+    return (
+      <select
+        className="its-json__opt"
+        value={value ? "true" : "false"}
+        aria-label="Fixed boolean value"
+        onChange={(event) => onChange(event.target.value === "true")}
+      >
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
+    );
+  }
+  // Fixed strings are typed without quotes; the builder adds them when the
+  // JSON is emitted. Right-click inserts a ${variable} reference.
+  return (
+    <VariableField
+      as="input"
+      className="its-json__literal"
+      spellCheck={false}
+      ariaLabel="Fixed string value"
+      title="A fixed string, emitted as a quoted JSON string. No quotes needed; supports ${variables}."
+      value={typeof value === "string" ? value : ""}
+      onValueChange={onChange}
+    />
+  );
+}
 
-  const commit = (raw: string): void => {
-    try {
-      onChange(JSON.parse(raw) as JsonValue);
-      setInvalid(false);
-      setDraft(null);
-    } catch {
-      // Bare text is treated as a string so fixed values need no quoting
-      if (!/^[\s{["]|^-?[0-9]|^(true|false|null)$/.test(raw.trim()) && raw.trim() !== "") {
-        onChange(raw);
-        setInvalid(false);
-        setDraft(null);
-      } else {
-        setInvalid(true);
-      }
-    }
-  };
+function FixedNumberEditor({ value, onChange }: { value: number; onChange: (value: JsonValue) => void }): JSX.Element {
+  const [draft, setDraft] = useState<string | null>(null);
+  const invalid = draft !== null && Number.isNaN(Number.parseFloat(draft));
 
   return (
     <input
       className={invalid ? "its-json__literal its-json__literal--invalid" : "its-json__literal"}
-      type="text"
-      spellCheck={false}
-      aria-label="Fixed JSON value"
-      title='A fixed JSON value, emitted verbatim. Unquoted text is kept as a string; use JSON syntax for numbers, booleans, arrays and objects.'
-      value={draft ?? JSON.stringify(value)}
-      onChange={(event) => setDraft(event.target.value)}
-      onBlur={(event) => {
-        if (draft !== null) commit(event.target.value);
+      type="number"
+      step="any"
+      aria-label="Fixed number value"
+      title="A fixed number, emitted without quotes"
+      value={draft ?? String(value)}
+      onChange={(event) => {
+        setDraft(event.target.value);
+        const parsed = Number.parseFloat(event.target.value);
+        if (!Number.isNaN(parsed)) onChange(parsed);
       }}
+      onBlur={() => setDraft(null)}
     />
   );
 }
@@ -376,12 +409,12 @@ function GeneratedEntryEditor(props: {
   return (
     <div className="its-json__row its-json__row--generated">
       <span className="its-json__genlabel">{props.label}</span>
-      <input
+      <VariableField
+        as="input"
         className="its-json__description"
-        type="text"
         value={props.description}
         placeholder="What should be generated here?"
-        onChange={(event) => props.onDescription(event.target.value)}
+        onValueChange={props.onDescription}
       />
       {props.itemType !== undefined && props.onItemType && (
         <select className="its-json__opt" value={props.itemType} aria-label="Item type" onChange={(event) => props.onItemType?.(event.target.value)}>

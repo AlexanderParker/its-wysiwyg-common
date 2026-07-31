@@ -13,6 +13,7 @@ import { AddBlockMenu } from "./AddBlockMenu";
 import { BlockFrame } from "./BlockFrame";
 import { ConfigForm } from "./ConfigForm";
 import { JsonStructureBlock } from "./JsonStructureBlock";
+import { VariableField } from "./VariableField";
 
 interface BlockListProps {
   elements: ContentElement[];
@@ -165,12 +166,13 @@ function TextBlock(props: BlockProps & { element: TextElement }): JSX.Element {
   const { element, onChange } = props;
   return (
     <BlockFrame kind="text" label="Text" {...frameProps(props)}>
-      <textarea
+      <VariableField
+        as="textarea"
         className="its-textarea"
         rows={Math.min(10, Math.max(2, element.text.split("\n").length))}
         value={element.text}
-        placeholder={'Static content. Reference variables with ${name}. Use \\n via real line breaks.'}
-        onChange={(event) => onChange({ ...element, text: event.target.value })}
+        placeholder={'Static content. Reference variables with ${name}, or right-click to insert one.'}
+        onValueChange={(text) => onChange({ ...element, text })}
       />
     </BlockFrame>
   );
@@ -235,12 +237,13 @@ function ConditionalBlock(props: BlockProps & { element: ConditionalElement }): 
 
   return (
     <BlockFrame kind="conditional" label={<span>If</span>} {...frameProps(props)}>
-      <input
+      <VariableField
+        as="input"
         className="its-condition"
-        type="text"
+        insertFormat="bare"
         value={element.condition}
-        placeholder={"e.g. audienceLevel == 'technical' && featureCount > 3"}
-        onChange={(event) => onChange({ ...element, condition: event.target.value })}
+        placeholder={"e.g. audienceLevel == 'technical' && featureCount > 3 (right-click to insert a variable)"}
+        onValueChange={(condition) => onChange({ ...element, condition })}
       />
       <div className="its-branch">
         <span className="its-branch__label">then</span>
