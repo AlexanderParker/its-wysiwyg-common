@@ -11,6 +11,7 @@ import {
 import type { ConditionalElement, ContentElement, PlaceholderElement, TextElement } from "../types";
 import { insertAt, moveItem, nextElementId, removeAt, replaceAt, textLayout } from "../utils";
 import { AddBlockMenu } from "./AddBlockMenu";
+import { BlockActionsMenu, type BlockActions } from "./BlockActionsMenu";
 import { ConfigForm } from "./ConfigForm";
 import { JsonStructureBlock } from "./JsonStructureBlock";
 import { Modal } from "./Modal";
@@ -59,8 +60,29 @@ function flattenSlots(slots: Slot[]): ContentElement[] {
 
 export function BlockList({ elements, onChange, depth = 0 }: BlockListProps): JSX.Element {
   const slots = computeSlots(elements);
+  // The slot index where the add panel is open; blocks added there land at
+  // exactly that position. slots.length means the trailing add trigger.
+  const [insertIndex, setInsertIndex] = useState<number | null>(null);
 
   const commit = (nextSlots: Slot[]): void => onChange(flattenSlots(nextSlots));
+
+  const insertElementAt = (index: number, element: ContentElement): void => {
+    setInsertIndex(null);
+    commit(insertAt(slots, index, { kind: "single", element }));
+  };
+
+  const insertGroupAt = (index: number, group: ContentElement[]): void => {
+    setInsertIndex(null);
+    const groupId = jsonStructureGroupId(group[0]?.id);
+    const structure = groupId !== null ? parseJsonStructure(group) : null;
+    if (groupId !== null && structure !== null) {
+      commit(insertAt(slots, index, { kind: "json", groupId, structure, elements: group }));
+    } else {
+      const before = flattenSlots(slots.slice(0, index));
+      const after = flattenSlots(slots.slice(index));
+      onChange([...before, ...group, ...after]);
+    }
+  };
 
   const duplicateSlot = (index: number): void => {
     const source = slots[index];
@@ -81,6 +103,18 @@ export function BlockList({ elements, onChange, depth = 0 }: BlockListProps): JS
     }
   };
 
+  const insertionPoint = (index: number): JSX.Element | null =>
+    insertIndex === index ? (
+      <AddBlockMenu
+        compact={depth > 0}
+        open
+        showTrigger={false}
+        onToggle={(next) => setInsertIndex(next ? index : null)}
+        onAdd={(element) => insertElementAt(index, element)}
+        onAddGroup={(group) => insertGroupAt(index, group)}
+      />
+    ) : null;
+
   return (
     <div className={depth === 0 ? "its-blocklist" : "its-blocklist its-blocklist--nested"}>
       {elements.length === 0 && (
@@ -91,9 +125,11 @@ export function BlockList({ elements, onChange, depth = 0 }: BlockListProps): JS
         </p>
       )}
       {slots.map((slot, index) => {
-        const shared = {
+        const shared: BlockActions = {
           onMoveUp: (): void => commit(moveItem(slots, index, index - 1)),
           onMoveDown: (): void => commit(moveItem(slots, index, index + 1)),
+          onInsertBefore: (): void => setInsertIndex(index),
+          onInsertAfter: (): void => setInsertIndex(index + 1),
           onDuplicate: (): void => duplicateSlot(index),
           onDelete: (): void => commit(removeAt(slots, index)),
           canMoveUp: index > 0,
@@ -102,6 +138,7 @@ export function BlockList({ elements, onChange, depth = 0 }: BlockListProps): JS
         if (slot.kind === "json") {
           return (
             <Fragment key={`json-${slot.groupId}`}>
+              {insertionPoint(index)}
               <JsonStructureBlock
                 structure={slot.structure}
                 onChange={(structure) =>
@@ -122,6 +159,7 @@ export function BlockList({ elements, onChange, depth = 0 }: BlockListProps): JS
         const element = slot.element;
         return (
           <Fragment key={element.id ?? `${element.type}-${index}`}>
+            {insertionPoint(index)}
             <Block
               element={element}
               onChange={(updated) => commit(replaceAt(slots, index, { kind: "single", element: updated }))}
@@ -133,23 +171,32 @@ export function BlockList({ elements, onChange, depth = 0 }: BlockListProps): JS
       })}
       <AddBlockMenu
         compact={depth > 0}
-        onAdd={(element) => onChange([...elements, element])}
-        onAddGroup={(group) => onChange([...elements, ...group])}
+        open={insertIndex === slots.length}
+        onToggle={(next) => setInsertIndex(next ? slots.length : null)}
+        onAdd={(element) => insertElementAt(slots.length, element)}
+        onAddGroup={(group) => insertGroupAt(slots.length, group)}
       />
     </div>
   );
 }
 
-interface BlockProps {
+interface BlockProps extends BlockActions {
   element: ContentElement;
   onChange: (element: ContentElement) => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-  onDuplicate: () => void;
-  onDelete: () => void;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
   depth: number;
+}
+
+function actionsOf(props: BlockProps): BlockActions {
+  return {
+    onMoveUp: props.onMoveUp,
+    onMoveDown: props.onMoveDown,
+    onInsertBefore: props.onInsertBefore,
+    onInsertAfter: props.onInsertAfter,
+    onDuplicate: props.onDuplicate,
+    onDelete: props.onDelete,
+    canMoveUp: props.canMoveUp,
+    canMoveDown: props.canMoveDown,
+  };
 }
 
 function Block(props: BlockProps): JSX.Element {
@@ -164,36 +211,25 @@ function Block(props: BlockProps): JSX.Element {
 }
 
 /**
- * Document-flow wrapper: blocks sit in the order they compile, with the
- * reorder/duplicate/delete actions in a toolbar revealed on hover or focus
- * (always visible on narrow/touch layouts). Inline blocks flow alongside
- * their neighbours until a line break; full blocks take the whole row.
+ * Document-flow wrapper: blocks sit in the order they compile, with their
+ * actions (move, insert before/after, duplicate, delete) behind a single
+ * icon that opens on click or tap. Placeholder tokens host the icon inside
+ * the token instead. Inline blocks flow alongside their neighbours until a
+ * line break; full blocks take the whole row.
  */
 function FlowBlock(
   props: BlockProps & {
     kind: "text" | "placeholder" | "conditional";
     display?: "inline" | "full" | "break";
+    actionsInside?: boolean;
     children: ReactNode;
   },
 ): JSX.Element {
-  const { kind, display = "full", children, onMoveUp, onMoveDown, onDuplicate, onDelete, canMoveUp, canMoveDown } = props;
+  const { kind, display = "full", actionsInside = false, children } = props;
   return (
     <div className={`its-flow its-flow--${kind} its-flow--${display}`}>
       <div className="its-flow__content">{children}</div>
-      <span className="its-flow__actions">
-        <button type="button" title="Move up" disabled={!canMoveUp} onClick={onMoveUp} aria-label="Move block up">
-          ↑
-        </button>
-        <button type="button" title="Move down" disabled={!canMoveDown} onClick={onMoveDown} aria-label="Move block down">
-          ↓
-        </button>
-        <button type="button" title="Duplicate" onClick={onDuplicate} aria-label="Duplicate block">
-          ⧉
-        </button>
-        <button type="button" title="Delete" className="its-flow__delete" onClick={onDelete} aria-label="Delete block">
-          ✕
-        </button>
-      </span>
+      {!actionsInside && <BlockActionsMenu {...actionsOf(props)} />}
     </div>
   );
 }
@@ -260,7 +296,7 @@ function PlaceholderBlock(props: BlockProps & { element: PlaceholderElement }): 
   );
 
   return (
-    <FlowBlock {...props} kind="placeholder" display="inline">
+    <FlowBlock {...props} kind="placeholder" display="inline" actionsInside>
       <div className={knownType ? "its-token" : "its-token its-token--unknown"}>
         <span className="its-token__chevrons">&laquo;</span>
         <select
@@ -302,6 +338,7 @@ function PlaceholderBlock(props: BlockProps & { element: PlaceholderElement }): 
         >
           ⚙
         </button>
+        <BlockActionsMenu {...actionsOf(props)} />
       </div>
       {settingsOpen && (
         <Modal

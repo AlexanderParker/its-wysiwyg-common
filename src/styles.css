@@ -235,59 +235,73 @@
   min-width: 0;
 }
 
-.its-flow__actions {
-  position: absolute;
-  top: -13px;
-  right: 4px;
-  z-index: 5;
+/* Block actions: a single icon per block opening a small menu on click */
+
+.its-actionsmenu {
+  position: relative;
   display: inline-flex;
-  gap: 2px;
-  padding: 1px;
-  background: var(--its-paper);
-  border: 1px solid var(--its-line);
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgb(28 33 40 / 0.12);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 120ms ease;
+  flex: none;
+  align-self: flex-start;
 }
 
-.its-flow:hover > .its-flow__actions,
-.its-flow:focus-within > .its-flow__actions {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-@media (max-width: 760px), (pointer: coarse) {
-  .its-flow__actions {
-    opacity: 0.75;
-    pointer-events: auto;
-  }
-}
-
-.its-flow__actions button {
+.its-actionsmenu__trigger {
   appearance: none;
   border: none;
   background: transparent;
   color: var(--its-ink-soft);
   width: 22px;
-  height: 22px;
+  height: 24px;
   border-radius: 5px;
+  font-size: 14px;
+  font-weight: 700;
   line-height: 1;
-  font-size: 12px;
 }
 
-.its-flow__actions button:hover:not(:disabled) {
+.its-actionsmenu__trigger:hover,
+.its-actionsmenu__trigger[aria-expanded="true"] {
   background: color-mix(in srgb, currentColor 12%, transparent);
 }
 
-.its-flow__actions button:disabled {
-  opacity: 0.35;
+.its-actionsmenu__panel {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  z-index: 40;
+  min-width: 10.5rem;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  background: var(--its-paper);
+  border: 1px solid var(--its-line);
+  border-radius: var(--its-radius);
+  box-shadow: 0 6px 20px rgb(28 33 40 / 0.16);
+}
+
+.its-actionsmenu__panel button {
+  appearance: none;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  border-radius: 5px;
+  color: var(--its-ink);
+  white-space: nowrap;
+}
+
+.its-actionsmenu__panel button:hover:not(:disabled) {
+  background: var(--its-accent-soft);
+  color: var(--its-accent);
+}
+
+.its-actionsmenu__panel button:disabled {
+  opacity: 0.4;
   cursor: default;
 }
 
-.its-flow__delete:hover {
-  color: var(--its-danger);
+.its-actionsmenu__delete:hover:not(:disabled) {
+  background: #fbeaea !important;
+  color: var(--its-danger) !important;
 }
 
 /* Text in the flow: borderless until focused, mono like the template body */
@@ -571,36 +585,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.its-block__actions {
-  display: inline-flex;
-  gap: 2px;
-  flex: none;
-}
-
-.its-block__actions button {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: inherit;
-  width: 24px;
-  height: 24px;
-  border-radius: 5px;
-  line-height: 1;
-}
-
-.its-block__actions button:hover:not(:disabled) {
-  background: color-mix(in srgb, currentColor 12%, transparent);
-}
-
-.its-block__actions button:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.its-block__delete:hover {
-  color: var(--its-danger);
 }
 
 .its-block__body {
