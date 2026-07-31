@@ -20,6 +20,19 @@ import type { ContentElement, JsonValue, PlaceholderElement, TextElement } from 
 
 export type JsonGeneratedLeafType = "json_string" | "json_number" | "json_value";
 
+/**
+ * The instruction types the builder's serialised elements rely on. Hosts
+ * offer the builder only when the palette provides all of them (i.e. the
+ * template extends the JSON type library).
+ */
+export const JSON_STRUCTURE_TYPES = [
+  "json_string",
+  "json_number",
+  "json_value",
+  "json_array_items",
+  "json_object_fields",
+] as const;
+
 export type JsonStructureValue =
   | { kind: "literal"; value: JsonValue }
   | {
