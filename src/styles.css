@@ -852,3 +852,59 @@
   background: var(--its-accent-soft);
   color: var(--its-accent);
 }
+
+.its-varmenu__row {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.its-varmenu__toggle {
+  width: 1.1rem;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--its-ink-soft);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0.15rem 0;
+}
+
+.its-varmenu__toggle--empty {
+  cursor: default;
+}
+
+.its-varmenu__insert {
+  flex: 1;
+  text-align: left;
+  font-family: var(--its-mono);
+  font-size: 0.8rem;
+  padding: 0.2rem 0.35rem;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: var(--its-ink);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.its-varmenu__insert:hover {
+  background: var(--its-accent-soft);
+  color: var(--its-accent);
+}
+
+.its-varmenu__insert--group {
+  color: var(--its-ink-soft);
+  font-style: italic;
+}
+
+.its-json__nullchip {
+  font-family: var(--its-mono);
+  font-size: 0.85rem;
+  color: var(--its-ink-soft);
+  padding: 0.25rem 0.6rem;
+  border: 1px dashed var(--its-line);
+  border-radius: var(--its-radius);
+}
