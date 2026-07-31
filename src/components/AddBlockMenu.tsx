@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useEditorContext } from "../context";
-import { emptyJsonStructure, serialiseJsonStructure } from "../jsonStructure";
+import { JSON_STRUCTURE_TYPES, emptyJsonStructure, serialiseJsonStructure } from "../jsonStructure";
 import type { ContentElement } from "../types";
 import { defaultConfigFor, nextElementId } from "../utils";
 
@@ -13,6 +13,10 @@ interface AddBlockMenuProps {
 export function AddBlockMenu({ onAdd, onAddGroup, compact = false }: AddBlockMenuProps): JSX.Element {
   const { instructionTypes } = useEditorContext();
   const [open, setOpen] = useState(false);
+
+  // The builder serialises to JSON type placeholders, so it is only offered
+  // when the template's palette provides those types
+  const jsonStructureAvailable = JSON_STRUCTURE_TYPES.every((name) => name in instructionTypes);
 
   const add = (element: ContentElement): void => {
     onAdd(element);
@@ -60,7 +64,7 @@ export function AddBlockMenu({ onAdd, onAddGroup, compact = false }: AddBlockMen
           <span className="its-add__label">Structure</span>
           <button type="button" onClick={addText}>Text</button>
           <button type="button" onClick={addConditional}>Conditional</button>
-          {onAddGroup && (
+          {onAddGroup && jsonStructureAvailable && (
             <button type="button" title="Interactively build a JSON document with generated value positions" onClick={addJsonStructure}>
               JSON structure
             </button>
