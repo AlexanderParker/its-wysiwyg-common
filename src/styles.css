@@ -1066,12 +1066,26 @@
 }
 
 .its-json__name {
-  width: 9rem;
   font-family: var(--its-mono);
   font-size: 0.85rem;
   padding: 0.25rem 0.4rem;
   border: 1px solid var(--its-line);
   border-radius: var(--its-radius);
+}
+
+/* Property keys size to their content via the shared hidden mirror */
+.its-grow--jsonname {
+  flex: none;
+  min-width: 3.5rem;
+  max-width: 14rem;
+}
+
+.its-grow--jsonname::after {
+  font-family: var(--its-mono);
+  font-size: 0.85rem;
+  line-height: normal;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid transparent;
 }
 
 .its-json__colon {
@@ -1093,6 +1107,8 @@
 
 .its-json__kind,
 .its-json__opt {
+  width: auto !important;
+  flex: none;
   font-size: 0.8rem;
   padding: 0.25rem 0.3rem;
   border: 1px solid var(--its-line);
@@ -1129,7 +1145,8 @@
 }
 
 .its-json__count {
-  width: 4.5rem;
+  width: 4.5rem !important;
+  flex: none;
   font-size: 0.8rem;
   padding: 0.25rem 0.3rem;
   border: 1px solid var(--its-line);
