@@ -26,6 +26,11 @@ export function AddBlockMenu({ onAdd, onAddGroup, compact = false }: AddBlockMen
   const addText = (): void =>
     add({ type: "text", text: "", id: nextElementId("text") });
 
+  // A line break is a text element holding a literal newline: it appears
+  // verbatim in the compiled template rather than being generated
+  const addLineBreak = (): void =>
+    add({ type: "text", text: "\n", id: nextElementId("text") });
+
   const addConditional = (): void =>
     add({
       type: "conditional",
@@ -63,6 +68,9 @@ export function AddBlockMenu({ onAdd, onAddGroup, compact = false }: AddBlockMen
         <div className="its-add__group">
           <span className="its-add__label">Structure</span>
           <button type="button" onClick={addText}>Text</button>
+          <button type="button" title="Ends the current line in the compiled template" onClick={addLineBreak}>
+            Line break
+          </button>
           <button type="button" onClick={addConditional}>Conditional</button>
           {onAddGroup && jsonStructureAvailable && (
             <button type="button" title="Interactively build a JSON document with generated value positions" onClick={addJsonStructure}>

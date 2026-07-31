@@ -67,6 +67,18 @@ export function coercePropertyValue(schema: ConfigPropertySchema, raw: string): 
   return raw;
 }
 
+/**
+ * How a text element participates in the document flow: newline-only text
+ * is a line break, single-line text flows inline alongside neighbouring
+ * elements, and text with embedded newlines takes a full row.
+ */
+export function textLayout(text: string): "break" | "inline" | "block" {
+  if (/^\n+$/.test(text)) {
+    return "break";
+  }
+  return text.includes("\n") ? "block" : "inline";
+}
+
 /** All instruction types visible to a template: palette types plus its own custom types. */
 export function resolveInstructionTypes(
   template: ItsTemplate,

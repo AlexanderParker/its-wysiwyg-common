@@ -98,12 +98,20 @@
 
 .its-blocklist {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-flow: row wrap;
+  align-items: flex-start;
+  column-gap: 2px;
+  row-gap: 6px;
 }
 
 .its-blocklist--nested {
-  gap: 5px;
+  row-gap: 5px;
+}
+
+.its-blocklist > .its-block,
+.its-blocklist > .its-add,
+.its-blocklist__empty {
+  flex: 1 1 100%;
 }
 
 .its-blocklist__empty {
@@ -127,27 +135,133 @@
   border-radius: 6px;
 }
 
+.its-flow--full,
+.its-flow--break {
+  flex: 1 1 100%;
+}
+
+.its-flow--inline {
+  flex: 0 1 auto;
+  max-width: 100%;
+  align-items: center;
+}
+
+.its-flow--inline > .its-flow__content {
+  flex: 0 1 auto;
+}
+
+/* Inline flow: single-line text grows with its content via a hidden mirror */
+
+.its-grow {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+/* The hidden mirror alone sizes the wrapper; the input overlays it, so the
+   input's intrinsic default width never inflates the layout */
+.its-grow::after {
+  content: attr(data-value) " ";
+  display: block;
+  visibility: hidden;
+  white-space: pre;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.its-grow > input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+.its-grow--text {
+  min-width: 3rem;
+}
+
+.its-grow--text::after {
+  font-family: var(--its-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 5px 7px;
+}
+
+.its-flowinline {
+  font-family: var(--its-mono) !important;
+  font-size: 13px !important;
+  line-height: 1.5;
+  border-color: transparent !important;
+  background: transparent !important;
+  padding: 4px 6px !important;
+}
+
+.its-flowinline:hover {
+  border-color: var(--its-line) !important;
+}
+
+.its-flowinline:focus {
+  border-color: var(--its-accent) !important;
+  background: var(--its-paper) !important;
+}
+
+.its-grow--desc {
+  flex: 0 1 auto;
+  min-width: 10rem;
+  max-width: 30rem;
+}
+
+.its-grow--desc::after {
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 4px 14px 4px 8px;
+}
+
+/* Line break chip: a newline-only text element, ending the current row */
+
+.its-breakchip {
+  display: inline-block;
+  font-family: var(--its-mono);
+  font-size: 11px;
+  color: var(--its-ink-soft);
+  border: 1px dashed var(--its-line);
+  border-radius: 4px;
+  padding: 1px 7px;
+  line-height: 1.5;
+}
+
 .its-flow__content {
   flex: 1;
   min-width: 0;
 }
 
 .its-flow__actions {
+  position: absolute;
+  top: -13px;
+  right: 4px;
+  z-index: 5;
   display: inline-flex;
   gap: 2px;
-  flex: none;
+  padding: 1px;
+  background: var(--its-paper);
+  border: 1px solid var(--its-line);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgb(28 33 40 / 0.12);
   opacity: 0;
+  pointer-events: none;
   transition: opacity 120ms ease;
 }
 
 .its-flow:hover > .its-flow__actions,
 .its-flow:focus-within > .its-flow__actions {
   opacity: 1;
+  pointer-events: auto;
 }
 
 @media (max-width: 760px), (pointer: coarse) {
   .its-flow__actions {
-    opacity: 0.6;
+    opacity: 0.75;
+    pointer-events: auto;
   }
 }
 
@@ -201,8 +315,9 @@
 /* Placeholder token: mirrors the compiled << >> marker */
 
 .its-token {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  max-width: 100%;
   gap: 5px;
   padding: 3px 6px;
   border: 1px solid color-mix(in srgb, var(--its-accent) 30%, var(--its-line));
@@ -242,8 +357,6 @@
 }
 
 .its-token__description {
-  flex: 1;
-  min-width: 8rem;
   font-size: 13px !important;
   border-color: transparent !important;
   background: transparent !important;
@@ -293,9 +406,10 @@
     flex-wrap: wrap;
   }
 
-  .its-token__description {
+  .its-token .its-grow--desc {
     order: 5;
     flex-basis: 100%;
+    max-width: 100%;
   }
 }
 
@@ -951,7 +1065,14 @@
   display: flex;
   align-items: flex-start;
   gap: 0.35rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 640px) {
+  .its-json__row,
+  .its-json__valuehead {
+    flex-wrap: wrap !important;
+  }
 }
 
 .its-json__row--generated {
@@ -976,14 +1097,14 @@
 
 .its-json__value {
   flex: 1;
-  min-width: 14rem;
+  min-width: 8rem;
 }
 
 .its-json__valuehead {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .its-json__kind,
@@ -997,11 +1118,15 @@
 
 .its-json__description {
   flex: 1;
-  min-width: 10rem;
+  min-width: 6rem;
   font-size: 0.85rem;
   padding: 0.25rem 0.4rem;
   border: 1px solid var(--its-line);
   border-radius: var(--its-radius);
+}
+
+.its-json__container {
+  overflow-x: auto;
 }
 
 .its-json__literal {
