@@ -9,7 +9,7 @@ import {
   type JsonStructure,
 } from "../jsonStructure";
 import type { ConditionalElement, ContentElement, PlaceholderElement, TextElement } from "../types";
-import { insertAt, moveItem, nextElementId, removeAt, replaceAt } from "../utils";
+import { insertAt, moveItem, nextElementId, removeAt, replaceAt, textLayout } from "../utils";
 import { AddBlockMenu } from "./AddBlockMenu";
 import { ConfigForm } from "./ConfigForm";
 import { JsonStructureBlock } from "./JsonStructureBlock";
@@ -166,12 +166,19 @@ function Block(props: BlockProps): JSX.Element {
 /**
  * Document-flow wrapper: blocks sit in the order they compile, with the
  * reorder/duplicate/delete actions in a toolbar revealed on hover or focus
- * (always visible on narrow/touch layouts).
+ * (always visible on narrow/touch layouts). Inline blocks flow alongside
+ * their neighbours until a line break; full blocks take the whole row.
  */
-function FlowBlock(props: BlockProps & { kind: "text" | "placeholder" | "conditional"; children: ReactNode }): JSX.Element {
-  const { kind, children, onMoveUp, onMoveDown, onDuplicate, onDelete, canMoveUp, canMoveDown } = props;
+function FlowBlock(
+  props: BlockProps & {
+    kind: "text" | "placeholder" | "conditional";
+    display?: "inline" | "full" | "break";
+    children: ReactNode;
+  },
+): JSX.Element {
+  const { kind, display = "full", children, onMoveUp, onMoveDown, onDuplicate, onDelete, canMoveUp, canMoveDown } = props;
   return (
-    <div className={`its-flow its-flow--${kind}`}>
+    <div className={`its-flow its-flow--${kind} its-flow--${display}`}>
       <div className="its-flow__content">{children}</div>
       <span className="its-flow__actions">
         <button type="button" title="Move up" disabled={!canMoveUp} onClick={onMoveUp} aria-label="Move block up">
@@ -193,6 +200,41 @@ function FlowBlock(props: BlockProps & { kind: "text" | "placeholder" | "conditi
 
 function TextBlock(props: BlockProps & { element: TextElement }): JSX.Element {
   const { element, onChange } = props;
+  const layout = textLayout(element.text);
+
+  if (layout === "break") {
+    const count = element.text.length;
+    return (
+      <FlowBlock {...props} kind="text" display="break">
+        <span
+          className="its-breakchip"
+          style={count > 1 ? { marginBottom: `${(count - 1) * 0.7}em` } : undefined}
+          title={count === 1 ? "Line break" : `${count} line breaks (blank line in the output)`}
+        >
+          {"↵"}
+          {count > 1 ? ` ×${count}` : ""}
+        </span>
+      </FlowBlock>
+    );
+  }
+
+  if (layout === "inline") {
+    return (
+      <FlowBlock {...props} kind="text" display="inline">
+        <span className="its-grow its-grow--text" data-value={element.text}>
+          <VariableField
+            as="input"
+            className="its-flowinline"
+            value={element.text}
+            placeholder="text"
+            title={'Static content flowing inline. Reference variables with ${name}, or right-click to insert one. Add a Line break block to end the line.'}
+            onValueChange={(text) => onChange({ ...element, text })}
+          />
+        </span>
+      </FlowBlock>
+    );
+  }
+
   return (
     <FlowBlock {...props} kind="text">
       <VariableField
@@ -218,7 +260,7 @@ function PlaceholderBlock(props: BlockProps & { element: PlaceholderElement }): 
   );
 
   return (
-    <FlowBlock {...props} kind="placeholder">
+    <FlowBlock {...props} kind="placeholder" display="inline">
       <div className={knownType ? "its-token" : "its-token its-token--unknown"}>
         <span className="its-token__chevrons">&laquo;</span>
         <select
@@ -234,14 +276,16 @@ function PlaceholderBlock(props: BlockProps & { element: PlaceholderElement }): 
             </option>
           ))}
         </select>
-        <VariableField
-          as="input"
-          className="its-token__description"
-          value={element.config.description ?? ""}
-          placeholder="What should the AI generate here?"
-          ariaLabel="Placeholder description"
-          onValueChange={(description) => onChange({ ...element, config: { ...element.config, description } })}
-        />
+        <span className="its-grow its-grow--desc" data-value={element.config.description || "What should the AI generate here?"}>
+          <VariableField
+            as="input"
+            className="its-token__description"
+            value={element.config.description ?? ""}
+            placeholder="What should the AI generate here?"
+            ariaLabel="Placeholder description"
+            onValueChange={(description) => onChange({ ...element, config: { ...element.config, description } })}
+          />
+        </span>
         <span className="its-token__chevrons">&raquo;</span>
         {extraConfig.length > 0 && (
           <span className="its-token__badge" title={extraConfig.join(", ")}>
