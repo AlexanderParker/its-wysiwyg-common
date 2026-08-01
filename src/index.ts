@@ -9,6 +9,7 @@ export type {
   JsonValue,
   PlaceholderConfig,
   PlaceholderElement,
+  SchemaOption,
   TemplateEditorProps,
   TemplateMetadata,
   TextElement,
@@ -21,6 +22,7 @@ export {
   resolveInstructionTypes,
 } from "./utils";
 export {
+  JSON_STRUCTURE_TYPES,
   emptyJsonStructure,
   jsonStructureGroupId,
   newJsonStructureGroupId,

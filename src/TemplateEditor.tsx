@@ -14,6 +14,7 @@ export function TemplateEditor({
   value,
   onChange,
   instructionTypes = {},
+  schemaOptions = [],
   showJsonTab = true,
   className,
 }: TemplateEditorProps): JSX.Element {
@@ -69,7 +70,7 @@ export function TemplateEditor({
           {tab === "types" && (
             <CustomTypesPanel template={value} onChange={onChange} paletteTypes={instructionTypes} />
           )}
-          {tab === "metadata" && <MetadataPanel template={value} onChange={onChange} />}
+          {tab === "metadata" && <MetadataPanel template={value} onChange={onChange} schemaOptions={schemaOptions} />}
           {tab === "json" && showJsonTab && <JsonView template={value} onChange={onChange} />}
         </div>
       </div>

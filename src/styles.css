@@ -217,10 +217,25 @@
   padding: 4px 14px 4px 8px;
 }
 
-/* Line break chip: a newline-only text element, ending the current row */
+/* Line break: a newline-only text element ending the current row; the chip
+   anchors a dashed rule spanning the rest of the row so the break is
+   visible at a glance */
+
+.its-flow--break > .its-flow__content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.its-flow--break > .its-flow__content::after {
+  content: "";
+  flex: 1;
+  border-top: 1px dashed color-mix(in srgb, var(--its-ink-soft) 55%, transparent);
+}
 
 .its-breakchip {
   display: inline-block;
+  flex: none;
   font-family: var(--its-mono);
   font-size: 11px;
   color: var(--its-ink-soft);
@@ -887,6 +902,44 @@
   flex-direction: column;
   gap: 12px;
   max-width: 680px;
+}
+
+.its-schemarow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.its-schemarow__select {
+  width: auto !important;
+  flex: none;
+}
+
+.its-schemarow__url {
+  flex: 1;
+  font-size: 12.5px !important;
+}
+
+.its-schemarow__remove {
+  appearance: none;
+  border: none;
+  background: none;
+  flex: none;
+  color: var(--its-ink-soft);
+  border-radius: 5px;
+  width: 24px;
+  height: 24px;
+}
+
+.its-schemarow__remove:hover {
+  color: var(--its-danger);
+  background: #fbeaea;
+}
+
+.its-schemarow__add {
+  align-self: flex-start;
+  margin-top: 6px;
 }
 
 /* JSON view */
