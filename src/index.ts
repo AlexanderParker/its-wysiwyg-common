@@ -36,3 +36,20 @@ export type {
   JsonStructure,
   JsonStructureValue,
 } from "./jsonStructure";
+export {
+  isHorizontalRuleText,
+  markdownGroupOf,
+  newMarkdownGroupId,
+  parseHeadingText,
+  parseMarkdownCode,
+  parseMarkdownTable,
+  serialiseHeadingText,
+  serialiseMarkdownCode,
+  serialiseMarkdownTable,
+} from "./markdownStructure";
+export type {
+  MarkdownCodeBody,
+  MarkdownCodeModel,
+  MarkdownTableBody,
+  MarkdownTableModel,
+} from "./markdownStructure";

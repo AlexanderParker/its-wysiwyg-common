@@ -7,6 +7,7 @@ const model: JsonStructure = {
   entries: [
     { kind: "property", name: "id", value: { kind: "generated", type: "json_string", description: "an order id" } },
     { kind: "property", name: "status", value: { kind: "literal", value: "pending" } },
+    { kind: "property", name: "page", value: { kind: "numberRef", ref: "${pagination.page}" } },
     { kind: "property", name: "count", value: { kind: "generated", type: "json_number", description: "item count", numberType: "integer" } },
     {
       kind: "property",
@@ -48,7 +49,9 @@ const DUMMY_FILLS: Record<string, string> = {
 function renderWithDummyFills(elements: ContentElement[]): string {
   return elements
     .map((element) => {
-      if (element.type === "text") return element.text;
+      // ${refs} substitute like a compiler would; numberRef positions
+      // receive a bare number so the document parses
+      if (element.type === "text") return element.text.replace(/\$\{[^}]+\}/g, "7");
       if (element.type === "placeholder") return DUMMY_FILLS[element.instructionType] ?? "null";
       return "";
     })
@@ -73,6 +76,7 @@ describe("serialiseJsonStructure", () => {
     expect(() => JSON.parse(rendered)).not.toThrow();
     const parsed = JSON.parse(rendered) as Record<string, unknown>;
     expect(parsed.status).toBe("pending");
+    expect(parsed.page).toBe(7);
     expect(parsed.items).toEqual(["fixed-1", "a", "b", null]);
   });
 

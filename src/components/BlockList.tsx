@@ -8,12 +8,23 @@ import {
   serialiseJsonStructure,
   type JsonStructure,
 } from "../jsonStructure";
+import {
+  isHorizontalRuleText,
+  markdownGroupOf,
+  newMarkdownGroupId,
+  parseHeadingText,
+  parseMarkdownGroup,
+  serialiseHeadingText,
+  serialiseMarkdownGroup,
+  type MarkdownGroupModel,
+} from "../markdownStructure";
 import type { ConditionalElement, ContentElement, PlaceholderElement, TextElement } from "../types";
 import { insertAt, moveItem, nextElementId, removeAt, replaceAt, textLayout } from "../utils";
 import { AddBlockMenu } from "./AddBlockMenu";
 import { BlockActionsMenu, type BlockActions } from "./BlockActionsMenu";
 import { ConfigForm } from "./ConfigForm";
 import { JsonStructureBlock } from "./JsonStructureBlock";
+import { MarkdownCodeEditor, MarkdownTableEditor } from "./MarkdownBlocks";
 import { Modal } from "./Modal";
 import { VariableField } from "./VariableField";
 
@@ -30,7 +41,8 @@ interface BlockListProps {
  */
 type Slot =
   | { kind: "single"; element: ContentElement }
-  | { kind: "json"; groupId: string; structure: JsonStructure; elements: ContentElement[] };
+  | { kind: "json"; groupId: string; structure: JsonStructure; elements: ContentElement[] }
+  | { kind: "markdown"; groupId: string; group: MarkdownGroupModel; elements: ContentElement[] };
 
 function computeSlots(elements: ContentElement[]): Slot[] {
   const slots: Slot[] = [];
@@ -44,6 +56,22 @@ function computeSlots(elements: ContentElement[]): Slot[] {
       const structure = parseJsonStructure(run);
       if (structure !== null) {
         slots.push({ kind: "json", groupId, structure, elements: run });
+        index = end;
+        continue;
+      }
+    }
+    const mdGroup = markdownGroupOf(elements[index].id);
+    if (mdGroup !== null) {
+      let end = index;
+      while (end < elements.length) {
+        const next = markdownGroupOf(elements[end].id);
+        if (next === null || next.group !== mdGroup.group || next.kind !== mdGroup.kind) break;
+        end += 1;
+      }
+      const run = elements.slice(index, end);
+      const group = parseMarkdownGroup(mdGroup.kind, run);
+      if (group !== null) {
+        slots.push({ kind: "markdown", groupId: mdGroup.group, group, elements: run });
         index = end;
         continue;
       }
@@ -73,15 +101,21 @@ export function BlockList({ elements, onChange, depth = 0 }: BlockListProps): JS
 
   const insertGroupAt = (index: number, group: ContentElement[]): void => {
     setInsertIndex(null);
-    const groupId = jsonStructureGroupId(group[0]?.id);
-    const structure = groupId !== null ? parseJsonStructure(group) : null;
-    if (groupId !== null && structure !== null) {
-      commit(insertAt(slots, index, { kind: "json", groupId, structure, elements: group }));
-    } else {
-      const before = flattenSlots(slots.slice(0, index));
-      const after = flattenSlots(slots.slice(index));
-      onChange([...before, ...group, ...after]);
+    const jsonGroupId = jsonStructureGroupId(group[0]?.id);
+    const structure = jsonGroupId !== null ? parseJsonStructure(group) : null;
+    if (jsonGroupId !== null && structure !== null) {
+      commit(insertAt(slots, index, { kind: "json", groupId: jsonGroupId, structure, elements: group }));
+      return;
     }
+    const mdGroup = markdownGroupOf(group[0]?.id);
+    const parsed = mdGroup !== null ? parseMarkdownGroup(mdGroup.kind, group) : null;
+    if (mdGroup !== null && parsed !== null) {
+      commit(insertAt(slots, index, { kind: "markdown", groupId: mdGroup.group, group: parsed, elements: group }));
+      return;
+    }
+    const before = flattenSlots(slots.slice(0, index));
+    const after = flattenSlots(slots.slice(index));
+    onChange([...before, ...group, ...after]);
   };
 
   const duplicateSlot = (index: number): void => {
@@ -90,7 +124,7 @@ export function BlockList({ elements, onChange, depth = 0 }: BlockListProps): JS
       const copy = JSON.parse(JSON.stringify(source.element)) as ContentElement;
       copy.id = nextElementId(copy.type);
       commit(insertAt(slots, index + 1, { kind: "single", element: copy }));
-    } else {
+    } else if (source.kind === "json") {
       const groupId = newJsonStructureGroupId();
       commit(
         insertAt(slots, index + 1, {
@@ -98,6 +132,16 @@ export function BlockList({ elements, onChange, depth = 0 }: BlockListProps): JS
           groupId,
           structure: source.structure,
           elements: serialiseJsonStructure(source.structure, groupId),
+        }),
+      );
+    } else {
+      const groupId = newMarkdownGroupId();
+      commit(
+        insertAt(slots, index + 1, {
+          kind: "markdown",
+          groupId,
+          group: source.group,
+          elements: serialiseMarkdownGroup(source.group, groupId),
         }),
       );
     }
@@ -135,6 +179,48 @@ export function BlockList({ elements, onChange, depth = 0 }: BlockListProps): JS
           canMoveUp: index > 0,
           canMoveDown: index < slots.length - 1,
         };
+        if (slot.kind === "markdown") {
+          const group = slot.group;
+          return (
+            <Fragment key={`md-${slot.groupId}`}>
+              {insertionPoint(index)}
+              <FlowBlock
+                {...({ element: slot.elements[0], onChange: () => undefined, depth, ...shared } as BlockProps)}
+                kind="text"
+              >
+                {group.kind === "code" ? (
+                  <MarkdownCodeEditor
+                    model={group.model}
+                    onChange={(model) =>
+                      commit(
+                        replaceAt(slots, index, {
+                          kind: "markdown",
+                          groupId: slot.groupId,
+                          group: { kind: "code", model },
+                          elements: serialiseMarkdownGroup({ kind: "code", model }, slot.groupId),
+                        }),
+                      )
+                    }
+                  />
+                ) : (
+                  <MarkdownTableEditor
+                    model={group.model}
+                    onChange={(model) =>
+                      commit(
+                        replaceAt(slots, index, {
+                          kind: "markdown",
+                          groupId: slot.groupId,
+                          group: { kind: "table", model },
+                          elements: serialiseMarkdownGroup({ kind: "table", model }, slot.groupId),
+                        }),
+                      )
+                    }
+                  />
+                )}
+              </FlowBlock>
+            </Fragment>
+          );
+        }
         if (slot.kind === "json") {
           return (
             <Fragment key={`json-${slot.groupId}`}>
@@ -255,6 +341,49 @@ function TextBlock(props: BlockProps & { element: TextElement }): JSX.Element {
   }
 
   if (layout === "inline") {
+    if (isHorizontalRuleText(element.text)) {
+      return (
+        <FlowBlock {...props} kind="text" display="break">
+          <span className="its-hrchip" title="Horizontal rule: emitted as --- in the output" />
+        </FlowBlock>
+      );
+    }
+    const heading = parseHeadingText(element.text);
+    if (heading !== null) {
+      return (
+        <FlowBlock {...props} kind="text" display="inline">
+          <span className="its-heading">
+            <select
+              className="its-heading__level"
+              aria-label="Heading level"
+              value={heading.level}
+              onChange={(event) =>
+                onChange({ ...element, text: serialiseHeadingText(Number(event.target.value), heading.content) })
+              }
+            >
+              {[1, 2, 3, 4, 5, 6].map((level) => (
+                <option key={level} value={level}>
+                  H{level}
+                </option>
+              ))}
+            </select>
+            <span
+              className={`its-grow its-grow--text its-grow--head its-grow--head-h${heading.level}`}
+              data-value={heading.content || "Heading"}
+            >
+              <VariableField
+                as="input"
+                className="its-flowinline its-heading__text"
+                value={heading.content}
+                placeholder="Heading"
+                title={'Heading text; the #-marks are emitted for you. Supports ${variables}.'}
+                onValueChange={(content) => onChange({ ...element, text: serialiseHeadingText(heading.level, content) })}
+              />
+            </span>
+          </span>
+        </FlowBlock>
+      );
+    }
     return (
       <FlowBlock {...props} kind="text" display="inline">
         <span className="its-grow its-grow--text" data-value={element.text}>

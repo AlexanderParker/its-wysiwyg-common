@@ -36,6 +36,14 @@ export const JSON_STRUCTURE_TYPES = [
 export type JsonStructureValue =
   | { kind: "literal"; value: JsonValue }
   | {
+      /**
+       * A ${variable} reference at a numeric position, emitted unquoted so
+       * the compiler substitutes a bare number into the JSON document.
+       */
+      kind: "numberRef";
+      ref: string;
+    }
+  | {
       kind: "generated";
       type: JsonGeneratedLeafType;
       description: string;
@@ -123,6 +131,10 @@ function indentContinuationLines(text: string, indent: number): string {
 function writeValue(writer: FragmentWriter, value: JsonStructureValue, indent: number): void {
   if (value.kind === "literal") {
     writer.text(indentContinuationLines(JSON.stringify(value.value, null, 2), indent));
+    return;
+  }
+  if (value.kind === "numberRef") {
+    writer.text(value.ref);
     return;
   }
   if (value.kind === "generated") {
@@ -350,11 +362,25 @@ function parseValue(reader: FragmentReader): JsonStructureValue {
   }
   const char = reader.peekChar();
   if (char === null) throw new ParseFailure("expected a value");
+  if (char === "$") return parseNumberRef(reader);
   if (char === "{") return parseObject(reader);
   if (char === "[") return parseArray(reader);
   if (char === '"') return { kind: "literal", value: parseStringLiteral(reader) };
   if (/[-0-9]/.test(char)) return { kind: "literal", value: parseNumberLiteral(reader) };
   return { kind: "literal", value: parseKeyword(reader) };
+}
+
+function parseNumberRef(reader: FragmentReader): JsonStructureValue {
+  reader.expectChar("$");
+  reader.expectChar("{");
+  let path = "";
+  for (;;) {
+    const char = reader.nextChar();
+    if (char === "}") break;
+    path += char;
+  }
+  if (path.length === 0) throw new ParseFailure("empty variable reference");
+  return { kind: "numberRef", ref: `\${${path}}` };
 }
 
 function parseObject(reader: FragmentReader): JsonStructureValue {

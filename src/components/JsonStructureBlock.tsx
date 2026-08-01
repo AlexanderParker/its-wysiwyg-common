@@ -33,6 +33,7 @@ const VALUE_KINDS = [
 type ValueKindId = (typeof VALUE_KINDS)[number]["id"];
 
 function valueKindOf(value: JsonStructureValue): ValueKindId {
+  if (value.kind === "numberRef") return "literal-number";
   if (value.kind === "literal") {
     if (typeof value.value === "number") return "literal-number";
     if (typeof value.value === "boolean") return "literal-boolean";
@@ -365,20 +366,29 @@ function ValueEditor({
             )}
           </>
         )}
+        {value.kind === "numberRef" && <FixedNumberEditor value={value} onChange={onChange} />}
         {value.kind === "literal" && (
-          <LiteralEditor value={value.value} onChange={(literal) => onChange({ kind: "literal", value: literal })} />
+          <LiteralEditor value={value.value} onChange={(literal) => onChange({ kind: "literal", value: literal })} numberRefChange={onChange} />
         )}
       </div>
     </div>
   );
 }
 
-function LiteralEditor({ value, onChange }: { value: JsonValue; onChange: (value: JsonValue) => void }): JSX.Element {
+function LiteralEditor({
+  value,
+  onChange,
+  numberRefChange,
+}: {
+  value: JsonValue;
+  onChange: (value: JsonValue) => void;
+  numberRefChange: (value: JsonStructureValue) => void;
+}): JSX.Element {
   if (value === null) {
     return <span className="its-json__nullchip" title="Emitted as a JSON null">null</span>;
   }
   if (typeof value === "number") {
-    return <FixedNumberEditor value={value} onChange={onChange} />;
+    return <FixedNumberEditor value={{ kind: "literal", value }} onChange={numberRefChange} />;
   }
   if (typeof value === "boolean") {
     return (
@@ -408,22 +418,45 @@ function LiteralEditor({ value, onChange }: { value: JsonValue; onChange: (value
   );
 }
 
-function FixedNumberEditor({ value, onChange }: { value: number; onChange: (value: JsonValue) => void }): JSX.Element {
+const NUMBER_REF_PATTERN = /^\$\{[^}]+\}$/;
+
+/**
+ * A fixed number position: type a number, or right-click to insert a
+ * ${variable} reference (menu filtered to numeric values), which is emitted
+ * unquoted so the substituted JSON stays valid.
+ */
+function FixedNumberEditor({
+  value,
+  onChange,
+}: {
+  value: Extract<JsonStructureValue, { kind: "literal" } | { kind: "numberRef" }>;
+  onChange: (value: JsonStructureValue) => void;
+}): JSX.Element {
   const [draft, setDraft] = useState<string | null>(null);
-  const invalid = draft !== null && Number.isNaN(Number.parseFloat(draft));
+  const current = value.kind === "numberRef" ? value.ref : String(value.kind === "literal" ? value.value : "");
+  const shown = draft ?? current;
+  const invalid = draft !== null && !NUMBER_REF_PATTERN.test(draft.trim()) && Number.isNaN(Number.parseFloat(draft));
 
   return (
-    <input
+    <VariableField
+      as="input"
       className={invalid ? "its-json__literal its-json__literal--invalid" : "its-json__literal"}
-      type="number"
-      step="any"
-      aria-label="Fixed number value"
-      title="A fixed number, emitted without quotes"
-      value={draft ?? String(value)}
-      onChange={(event) => {
-        setDraft(event.target.value);
-        const parsed = Number.parseFloat(event.target.value);
-        if (!Number.isNaN(parsed)) onChange(parsed);
+      spellCheck={false}
+      ariaLabel="Fixed number value"
+      title="A fixed number, emitted without quotes. Right-click to insert a numeric ${variable}."
+      valueFilter="number"
+      value={shown}
+      onValueChange={(next) => {
+        setDraft(next);
+        const trimmed = next.trim();
+        if (NUMBER_REF_PATTERN.test(trimmed)) {
+          onChange({ kind: "numberRef", ref: trimmed });
+          return;
+        }
+        const parsed = Number.parseFloat(trimmed);
+        if (!Number.isNaN(parsed) && String(parsed) === trimmed) {
+          onChange({ kind: "literal", value: parsed });
+        }
       }}
       onBlur={() => setDraft(null)}
     />

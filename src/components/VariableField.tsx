@@ -15,7 +15,7 @@ import type { JsonValue } from "../types";
 export type InsertFormat = "template" | "bare";
 
 /** Restricts the tree to references that resolve to values of a kind. */
-export type ValueFilter = "integer";
+export type ValueFilter = "integer" | "number";
 
 export interface VariableTreeNode {
   label: string;
@@ -35,19 +35,24 @@ function isIntegerValue(value: JsonValue | undefined): boolean {
   return typeof value === "number" && Number.isInteger(value);
 }
 
+function matchesFilter(value: JsonValue | undefined, filter: ValueFilter): boolean {
+  return filter === "integer" ? isIntegerValue(value) : typeof value === "number";
+}
+
 function functionNodes(path: string, first: JsonValue | undefined, filter: ValueFilter | undefined): VariableTreeNode[] {
   const nodes: VariableTreeNode[] = [];
   if (isPlainObject(first)) {
     const keys = Object.keys(first);
-    if (filter === "integer") {
-      // avg can be fractional and concat/top are not integers, so only
-      // whole-number-preserving aggregations remain
-      const integerKeys = keys.filter((key) => isIntegerValue(first[key]));
-      for (const fn of ["sum", "min", "max"]) {
-        if (integerKeys.length > 0) {
+    if (filter !== undefined) {
+      // Numeric filters keep only aggregations producing that kind: avg can
+      // be fractional (number-only), concat and top never qualify
+      const matchingKeys = keys.filter((key) => matchesFilter(first[key], filter));
+      const functions = filter === "integer" ? ["sum", "min", "max"] : ["sum", "avg", "min", "max"];
+      for (const fn of functions) {
+        if (matchingKeys.length > 0) {
           nodes.push({
             label: `${fn}(…)`,
-            children: integerKeys.map((key) => ({ label: key, insertPath: `${path}.${fn}(${key})` })),
+            children: matchingKeys.map((key) => ({ label: key, insertPath: `${path}.${fn}(${key})` })),
           });
         }
       }
@@ -67,9 +72,10 @@ function functionNodes(path: string, first: JsonValue | undefined, filter: Value
       }
     }
   } else {
-    if (filter === "integer") {
-      if (isIntegerValue(first)) {
-        for (const fn of ["sum", "min", "max"]) {
+    if (filter !== undefined) {
+      if (matchesFilter(first, filter)) {
+        const functions = filter === "integer" ? ["sum", "min", "max"] : ["sum", "avg", "min", "max"];
+        for (const fn of functions) {
           nodes.push({ label: `${fn}()`, insertPath: `${path}.${fn}()` });
         }
       }
@@ -107,7 +113,7 @@ function nodeFor(
         children.push(nodeFor(`[${index}]`, item, `${path}[${index}]`, depth + 1, includeFunctions, filter));
       });
     }
-    return { label, insertPath: filter === "integer" ? undefined : path, children };
+    return { label, insertPath: filter !== undefined ? undefined : path, children };
   }
   if (isPlainObject(value)) {
     const children =
@@ -116,9 +122,9 @@ function nodeFor(
             nodeFor(key, item, `${path}.${key}`, depth + 1, includeFunctions, filter),
           )
         : undefined;
-    return { label, insertPath: filter === "integer" ? undefined : path, children };
+    return { label, insertPath: filter !== undefined ? undefined : path, children };
   }
-  if (filter === "integer" && !isIntegerValue(value)) {
+  if (filter !== undefined && !matchesFilter(value, filter)) {
     return { label };
   }
   return { label, insertPath: path };

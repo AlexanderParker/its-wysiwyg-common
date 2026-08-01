@@ -81,6 +81,18 @@ describe("buildVariableTree", () => {
     expect(find(forecast?.children ?? [], "top(…)")).toBeUndefined();
   });
 
+  it("number filter keeps decimals and offers avg", () => {
+    const tree = buildVariableTree({ rating: 4.5, level: 3, name: "x", readings: [1.5, 2.5] }, true, "number");
+
+    expect(find(tree, "rating")?.insertPath).toBe("rating");
+    expect(find(tree, "level")?.insertPath).toBe("level");
+    expect(find(tree, "name")).toBeUndefined();
+    const readings = find(tree, "readings");
+    expect(find(readings?.children ?? [], "avg()")?.insertPath).toBe("readings.avg()");
+    expect(find(readings?.children ?? [], "sum()")?.insertPath).toBe("readings.sum()");
+    expect(find(readings?.children ?? [], "concat()")).toBeUndefined();
+  });
+
   it("integer filter prunes branches with nothing selectable", () => {
     const tree = buildVariableTree({ names: ["a", "b"], nested: { note: "text" }, rating: 4.5 }, true, "integer");
 
