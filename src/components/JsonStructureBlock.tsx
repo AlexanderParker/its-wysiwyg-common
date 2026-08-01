@@ -204,10 +204,13 @@ function ArrayEditor({
       {entries.map((entry, index) => (
         <div className="its-json__entry" key={index}>
           {entry.kind === "item" ? (
-            <div className="its-json__row">
-              <ValueEditor value={entry.value} onChange={(value) => onChange(replaceAt(entries, index, { kind: "item", value }))} />
-              <RemoveButton onClick={() => onChange(removeAt(entries, index))} />
-            </div>
+            <>
+              <div className="its-json__row">
+                <ValueEditor value={entry.value} onChange={(value) => onChange(replaceAt(entries, index, { kind: "item", value }))} />
+                <RemoveButton onClick={() => onChange(removeAt(entries, index))} />
+              </div>
+              <ValueBody value={entry.value} onChange={(value) => onChange(replaceAt(entries, index, { kind: "item", value }))} />
+            </>
           ) : (
             <GeneratedEntryEditor
               label="generated items"
@@ -259,23 +262,47 @@ function PropertyEditor({
   onRemove: () => void;
 }): JSX.Element {
   return (
-    <div className="its-json__row">
-      <span className="its-grow its-grow--jsonname" data-value={entry.name || "name"}>
-        <input
-          className="its-json__name"
-          type="text"
-          value={entry.name}
-          spellCheck={false}
-          placeholder="name"
-          aria-label="Property name"
-          onChange={(event) => onChange({ ...entry, name: event.target.value })}
-        />
-      </span>
-      <span className="its-json__colon">:</span>
-      <ValueEditor value={entry.value} onChange={(value) => onChange({ ...entry, value })} />
-      <RemoveButton onClick={onRemove} />
-    </div>
+    <>
+      <div className="its-json__row">
+        <span className="its-grow its-grow--jsonname" data-value={entry.name || "name"}>
+          <input
+            className="its-json__name"
+            type="text"
+            value={entry.name}
+            spellCheck={false}
+            placeholder="name"
+            aria-label="Property name"
+            onChange={(event) => onChange({ ...entry, name: event.target.value })}
+          />
+        </span>
+        <span className="its-json__colon">:</span>
+        <ValueEditor value={entry.value} onChange={(value) => onChange({ ...entry, value })} />
+        <RemoveButton onClick={onRemove} />
+      </div>
+      <ValueBody value={entry.value} onChange={(value) => onChange({ ...entry, value })} />
+    </>
   );
+}
+
+/**
+ * The nested editor for container values, rendered below the row at the
+ * entry's own indent so indentation stacks one step per depth regardless
+ * of key length.
+ */
+function ValueBody({
+  value,
+  onChange,
+}: {
+  value: JsonStructureValue;
+  onChange: (value: JsonStructureValue) => void;
+}): JSX.Element | null {
+  if (value.kind === "object") {
+    return <ObjectEditor entries={value.entries} onChange={(entries) => onChange({ kind: "object", entries })} />;
+  }
+  if (value.kind === "array") {
+    return <ArrayEditor entries={value.entries} onChange={(entries) => onChange({ kind: "array", entries })} />;
+  }
+  return null;
 }
 
 function ValueEditor({
@@ -342,12 +369,6 @@ function ValueEditor({
           <LiteralEditor value={value.value} onChange={(literal) => onChange({ kind: "literal", value: literal })} />
         )}
       </div>
-      {value.kind === "object" && (
-        <ObjectEditor entries={value.entries} onChange={(entries) => onChange({ kind: "object", entries })} />
-      )}
-      {value.kind === "array" && (
-        <ArrayEditor entries={value.entries} onChange={(entries) => onChange({ kind: "array", entries })} />
-      )}
     </div>
   );
 }
