@@ -173,7 +173,6 @@ function ObjectEditor({
           )}
         </div>
       ))}
-      <span className="its-json__bracket">{"}"}</span>
       <div className="its-json__adders">
         <button
           type="button"
@@ -187,6 +186,7 @@ function ObjectEditor({
           + generated fields
         </button>
       </div>
+      <span className="its-json__bracket">{"}"}</span>
     </div>
   );
 }
@@ -236,7 +236,6 @@ function ArrayEditor({
           )}
         </div>
       ))}
-      <span className="its-json__bracket">]</span>
       <div className="its-json__adders">
         <button
           type="button"
@@ -248,6 +247,7 @@ function ArrayEditor({
           + generated items
         </button>
       </div>
+      <span className="its-json__bracket">]</span>
     </div>
   );
 }

@@ -89,8 +89,21 @@ export interface TemplateEditorProps {
    * on top of these automatically.
    */
   instructionTypes?: Record<string, InstructionTypeDefinition>;
+  /**
+   * Known extendable schemas offered by the Metadata tab's per-schema
+   * selects; templates can still extend any custom URL. Supplied by the
+   * host - the editor never fetches.
+   */
+  schemaOptions?: SchemaOption[];
   /** Hide the JSON source tab if the host app provides its own. */
   showJsonTab?: boolean;
   /** Optional extra class name on the editor root. */
   className?: string;
+}
+
+export interface SchemaOption {
+  /** Display label, e.g. "Standard types". */
+  label: string;
+  /** The published schema URL written into the template's extends. */
+  url: string;
 }
