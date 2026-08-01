@@ -1,6 +1,6 @@
 {
   "name": "its-template-editor",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "description": "WYSIWYG React editor component for Instruction Template Specification (ITS) templates",
   "license": "MIT",
   "author": "Alexander Parker",
