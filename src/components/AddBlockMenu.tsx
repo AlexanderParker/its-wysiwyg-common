@@ -1,5 +1,6 @@
 import { useEditorContext } from "../context";
 import { JSON_STRUCTURE_TYPES, emptyJsonStructure, serialiseJsonStructure } from "../jsonStructure";
+import { serialiseMarkdownCode, serialiseMarkdownTable } from "../markdownStructure";
 import type { ContentElement } from "../types";
 import { defaultConfigFor, nextElementId } from "../utils";
 
@@ -40,6 +41,37 @@ export function AddBlockMenu({
   // verbatim in the compiled template rather than being generated
   const addLineBreak = (): void =>
     add({ type: "text", text: "\n", id: nextElementId("text") });
+
+  // Markdown structure blocks serialise to literal markdown text; generated
+  // bodies additionally need the markdown types in the palette
+  const addHeading = (): void =>
+    add({ type: "text", text: "## ", id: nextElementId("text") });
+
+  const addHorizontalRule = (): void =>
+    add({ type: "text", text: "---", id: nextElementId("text") });
+
+  const addCodeBlock = (): void => {
+    onAddGroup?.(
+      serialiseMarkdownCode({
+        language: "",
+        body: "markdown_code" in instructionTypes ? { kind: "generated", description: "" } : { kind: "fixed", code: "" },
+      }),
+    );
+    onToggle(false);
+  };
+
+  const addTable = (): void => {
+    onAddGroup?.(
+      serialiseMarkdownTable({
+        columns: ["Column 1", "Column 2"],
+        body:
+          "markdown_table_rows" in instructionTypes
+            ? { kind: "generated", description: "" }
+            : { kind: "rows", rows: [["", ""]] },
+      }),
+    );
+    onToggle(false);
+  };
 
   const addConditional = (): void =>
     add({
@@ -84,6 +116,22 @@ export function AddBlockMenu({
           <button type="button" title="Ends the current line in the compiled template" onClick={addLineBreak}>
             Line break
           </button>
+          <button type="button" title="A Markdown heading; pick the level, type the text" onClick={addHeading}>
+            Heading
+          </button>
+          <button type="button" title="A Markdown horizontal rule (---)" onClick={addHorizontalRule}>
+            Horizontal rule
+          </button>
+          {onAddGroup && (
+            <button type="button" title="A fenced code block: set the language, then type the code or describe what to generate" onClick={addCodeBlock}>
+              Code block
+            </button>
+          )}
+          {onAddGroup && (
+            <button type="button" title="A Markdown table: name the columns, then add fixed rows or describe generated ones" onClick={addTable}>
+              Table
+            </button>
+          )}
           <button type="button" onClick={addConditional}>Conditional</button>
           {onAddGroup && jsonStructureAvailable && (
             <button type="button" title="Interactively build a JSON document with generated value positions" onClick={addJsonStructure}>

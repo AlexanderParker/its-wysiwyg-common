@@ -245,6 +245,159 @@
   line-height: 1.5;
 }
 
+/* Horizontal rule: a dashes-only text element rendered as a solid rule */
+
+.its-hrchip {
+  display: block;
+  flex: 1;
+  height: 0;
+  border-top: 2px solid var(--its-line);
+  margin: 8px 0;
+}
+
+/* Headings: single-line #-prefixed text edited as level + content */
+
+.its-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+}
+
+.its-heading__level {
+  width: auto !important;
+  flex: none;
+  font-family: var(--its-mono);
+  font-size: 11.5px !important;
+  font-weight: 700;
+  color: var(--its-ink-soft);
+  padding: 2px 3px !important;
+}
+
+/* Heading font lives on the grow wrapper so the hidden mirror and the
+   input agree on width */
+
+.its-grow--head {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.its-grow--head-h1 {
+  font-size: 17px;
+}
+
+.its-grow--head-h2 {
+  font-size: 15.5px;
+}
+
+.its-grow--head::after {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.its-heading__text {
+  font-size: inherit !important;
+  font-weight: inherit !important;
+}
+
+/* Markdown structure blocks (code, table) */
+
+.its-mdblock {
+  border: 1px solid var(--its-line);
+  border-left: 3px solid #6d28d9;
+  border-radius: var(--its-radius);
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.its-mdblock__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.its-mdblock__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6d28d9;
+}
+
+.its-mdblock__lang {
+  width: 9rem !important;
+  flex: none;
+  font-size: 12.5px !important;
+  padding: 3px 8px !important;
+}
+
+.its-mdblock__mode {
+  width: auto !important;
+  flex: none;
+  margin-left: auto;
+  font-size: 12px !important;
+  padding: 3px 6px !important;
+}
+
+.its-mdblock__code {
+  font-family: var(--its-mono) !important;
+  font-size: 12.5px !important;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.its-mdblock__genrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--its-accent-soft);
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+
+.its-mdtable__grid {
+  display: grid;
+  gap: 4px;
+  align-items: center;
+}
+
+.its-mdtable__headcell {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.its-mdtable__colname {
+  font-weight: 700;
+  font-size: 12.5px !important;
+  padding: 4px 7px !important;
+  background: var(--its-paper-dim) !important;
+}
+
+.its-mdtable__cell {
+  font-size: 12.5px !important;
+  padding: 4px 7px !important;
+}
+
+.its-mdtable__addcol {
+  appearance: none;
+  border: 1px dashed var(--its-line);
+  background: transparent;
+  color: var(--its-ink-soft);
+  border-radius: 5px;
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.its-mdtable__addcol:hover {
+  border-color: #6d28d9;
+  color: #6d28d9;
+}
+
 .its-flow__content {
   flex: 1;
   min-width: 0;
