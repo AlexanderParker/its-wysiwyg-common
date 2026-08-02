@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "v*"
+  # Lets a failed release be retried without moving or recreating the tag.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,7 +21,11 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          registry-url: "https://registry.npmjs.org"
+          # registry-url is deliberately NOT set here. It makes setup-node write
+          # an .npmrc containing a placeholder auth token, which npm then uses
+          # in preference to the OIDC exchange. The publish authenticates as
+          # nobody and the registry answers 404, because it reports an
+          # unauthorised write as a missing package.
 
       - name: Install dependencies
         run: npm ci
