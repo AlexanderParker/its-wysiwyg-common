@@ -109,6 +109,6 @@ The release workflow needs an `NPM_TOKEN` repository secret (an npm automation t
 - [Template studio demo](https://alexanderparker.github.io/its-template-studio/) - build and compile templates in the browser ([source](https://github.com/AlexanderParker/its-template-studio))
 - [its-compiler-js](https://github.com/AlexanderParker/its-compiler-js) - JavaScript/TypeScript reference compiler ([npm](https://www.npmjs.com/package/its-compiler-js))
 - [its-compiler-python](https://github.com/AlexanderParker/its-compiler-python) - Python reference compiler library ([PyPI](https://pypi.org/project/its-compiler/))
-- [its-compiler-dotnet](https://github.com/AlexanderParker/its-compiler-dotnet) - .NET compiler with an Azure Functions sample ([NuGet](https://www.nuget.org/packages/Its.Compiler))
+- [its-compiler-dotnet](https://github.com/AlexanderParker/its-compiler-dotnet) - .NET compiler with an Azure Functions sample ([NuGet](https://www.nuget.org/packages/InstructionTemplateSpecification.Compiler))
 - [its-compiler-cli](https://github.com/AlexanderParker/its-compiler-cli-python) - command-line interface for the Python compiler ([PyPI](https://pypi.org/project/its-compiler-cli/))
 - [its-example-templates](https://github.com/AlexanderParker/its-example-templates) - example and test templates exercising the published schemas
