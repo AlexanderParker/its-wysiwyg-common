@@ -87,10 +87,19 @@
   line-height: 17px;
 }
 
+/*
+ * A fieldset, so that read-only can be one disabled attribute. The border,
+ * margin and min-inline-size are the element's defaults rather than a style
+ * choice: min-content inline sizing is a fieldset speciality and would let a
+ * wide block push the panel past its column.
+ */
 .its-editor__body {
   flex: 1;
   min-height: 0;
+  min-inline-size: 0;
   overflow: auto;
+  border: 0;
+  margin: 0;
   padding: 14px;
 }
 

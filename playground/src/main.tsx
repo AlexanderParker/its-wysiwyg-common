@@ -86,11 +86,26 @@ const initialTemplate: ItsTemplate = {
 
 function Playground(): JSX.Element {
   const [template, setTemplate] = useState<ItsTemplate>(initialTemplate);
+  const [readOnly, setReadOnly] = useState(false);
+  const [pending, setPending] = useState(false);
 
   return (
     <div style={{ maxWidth: 960, margin: "2rem auto", padding: "0 1rem" }}>
       <h1>its-template-editor playground</h1>
-      <TemplateEditor value={template} onChange={setTemplate} instructionTypes={paletteTypes} />
+      <p>
+        <label>
+          <input type="checkbox" checked={readOnly} onChange={(event) => setReadOnly(event.target.checked)} /> Read
+          only
+        </label>{" "}
+        {pending && <strong>The JSON tab is holding unapplied text.</strong>}
+      </p>
+      <TemplateEditor
+        value={template}
+        onChange={setTemplate}
+        instructionTypes={paletteTypes}
+        readOnly={readOnly}
+        onPendingChange={setPending}
+      />
     </div>
   );
 }

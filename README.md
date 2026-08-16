@@ -39,7 +39,33 @@ export function MyApp() {
 | `onChange`         | `(template: ItsTemplate) => void`             | Called with a new template object on every edit.                                                |
 | `instructionTypes` | `Record<string, InstructionTypeDefinition>`   | Optional (defaults to `{}`). Types shown in the placeholder palette, e.g. the ITS standard types. Template-level `customInstructionTypes` are merged on top automatically. |
 | `showJsonTab`      | `boolean`                                     | Show the built-in JSON source tab, labelled "JSON" (default `true`).                            |
+| `readOnly`         | `boolean`                                     | Show the template without allowing changes (default `false`). Every control in the body is disabled and `onChange` is never called; the tab strip stays usable. |
+| `onPendingChange`  | `(pending: boolean) => void`                  | Called when the JSON tab starts or stops holding text that has not been applied. Not called when `showJsonTab` is `false`. |
 | `className`        | `string`                                      | Extra class on the editor root.                                                                 |
+
+### Read-only
+
+`readOnly` is for a host showing a template to somebody who may not change it,
+without having to hide the template from them. The controls are disabled rather
+than removed, so the document is still readable and its structure still visible.
+Disabled controls are out of the tab order, which is correct here: there is
+nothing on the surface that a keyboard user could act on.
+
+### Unapplied JSON
+
+Text typed in the JSON tab is not part of the template until Apply JSON is
+pressed. A host with its own Save action needs to know that, or saving while
+text is pending stores the older document and the typing is lost with no
+warning. `onPendingChange` reports it:
+
+```tsx
+const [pending, setPending] = useState(false);
+
+<TemplateEditor value={template} onChange={setTemplate} onPendingChange={setPending} />;
+<button disabled={pending} onClick={save}>Save</button>;
+```
+
+It reports `false` when the tab is left, because the text is discarded with it.
 
 ## Features
 
