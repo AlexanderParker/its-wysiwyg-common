@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ItsTemplate } from "../types";
 import { isItsTemplateShape } from "../utils";
 
 interface JsonViewProps {
   template: ItsTemplate;
   onChange: (template: ItsTemplate) => void;
+  /** Reports whether this tab holds text that is not in the template yet. */
+  onPendingChange?: (pending: boolean) => void;
 }
 
-export function JsonView({ template, onChange }: JsonViewProps): JSX.Element {
+export function JsonView({ template, onChange, onPendingChange }: JsonViewProps): JSX.Element {
   const [text, setText] = useState(() => JSON.stringify(template, null, 2));
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +19,29 @@ export function JsonView({ template, onChange }: JsonViewProps): JSX.Element {
       setText(JSON.stringify(template, null, 2));
     }
   }, [template, dirty]);
+
+  /*
+   * Held in a ref so the effect below depends on the pending state alone. A
+   * host passing an inline function gives a new identity on every render; an
+   * effect depending on it would report false then true each time, and a host
+   * that puts the value in state would render again on each report and never
+   * settle.
+   */
+  const report = useRef(onPendingChange);
+  useEffect(() => {
+    report.current = onPendingChange;
+  }, [onPendingChange]);
+
+  /*
+   * Leaving the tab discards the text, so the host is told the pending state
+   * is over. Without the cleanup, switching away from a dirty JSON tab would
+   * leave a host's save action refusing on account of text that no longer
+   * exists and a control that is no longer on screen.
+   */
+  useEffect(() => {
+    report.current?.(dirty);
+    return () => report.current?.(false);
+  }, [dirty]);
 
   const apply = (): void => {
     try {

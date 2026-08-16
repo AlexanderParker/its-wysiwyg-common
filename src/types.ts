@@ -97,6 +97,21 @@ export interface TemplateEditorProps {
   schemaOptions?: SchemaOption[];
   /** Hide the JSON source tab if the host app provides its own. */
   showJsonTab?: boolean;
+  /**
+   * Show the template without allowing it to be changed. Every control is
+   * disabled and onChange is never called, so a host that renders the editor
+   * for somebody with read access does not have to hide it.
+   */
+  readOnly?: boolean;
+  /**
+   * Called when the JSON tab starts or stops holding text that has not been
+   * applied to the template. A host with a save action needs this: text typed
+   * there is not in the template until Apply JSON is pressed, so saving while
+   * it is pending stores the older document and the typing is lost with no
+   * warning. Not called when showJsonTab is false, since there is then nothing
+   * inside the editor that can be pending.
+   */
+  onPendingChange?: (pending: boolean) => void;
   /** Optional extra class name on the editor root. */
   className?: string;
 }
